@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthGuard from '../../components/auth/AuthGuard';
 import MainLayout from '../../components/layout/MainLayout';
@@ -33,6 +33,7 @@ export default function SourcesPage() {
   const [updatingSource, setUpdatingSource] = useState(false);
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [allInvoices, setAllInvoices] = useState([]);
   const [stats, setStats] = useState({
     totalSources: 0,
     totalInvoices: 0,
@@ -43,43 +44,12 @@ export default function SourcesPage() {
   const isOwner = userRole === 'owner';
   const ownerId = localUserData?.ownerId || localUserData?.uid || user?.uid;
 
-  useEffect(() => {
-    // Load users for owner
-    if (isOwner && ownerId) {
-      loadUsers();
-    }
-    
-    // Subscribe to sources with real-time updates
-    setLoading(true);
-    const unsubscribe = subscribeToSources((sourcesData) => {
-      updateSourcesData(sourcesData);
-      setLoading(false);
-    });
-    
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [isOwner, ownerId]);
-
-  const loadUsers = async () => {
+  const updateSourcesData = useCallback((sourcesData) => {
     try {
-      if (ownerId) {
-        const usersList = await getUsersByOwner(ownerId);
-        setUsers(usersList);
-      }
-    } catch (error) {
-      console.error('Error loading users:', error);
-    }
-  };
-
-  const updateSourcesData = async (sourcesData) => {
-    try {
-      // Get all invoices to calculate counts
-      const allInvoices = await getInvoices();
-      
+      // Use invoices from state instead of fetching every time
       // Calculate invoice count for each source
       const transformedData = sourcesData.map((source) => {
-        // Count invoices for this source
+        // Count invoices for this source from state
         const sourceInvoices = allInvoices.filter(
           (invoice) => invoice.sourceId === source.id
         );
@@ -106,6 +76,46 @@ export default function SourcesPage() {
     } catch (error) {
       console.error('Error updating sources data:', error);
     }
+  }, [allInvoices]);
+
+  useEffect(() => {
+    // Load users for owner
+    if (isOwner && ownerId) {
+      loadUsers();
+    }
+    
+    // Load invoices once and keep in state
+    const loadInvoices = async () => {
+      try {
+        const invoices = await getInvoices();
+        setAllInvoices(invoices);
+      } catch (error) {
+        console.error('Error loading invoices:', error);
+      }
+    };
+    loadInvoices();
+    
+    // Subscribe to sources with real-time updates
+    setLoading(true);
+    const unsubscribe = subscribeToSources((sourcesData) => {
+      updateSourcesData(sourcesData);
+      setLoading(false);
+    });
+    
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [isOwner, ownerId, updateSourcesData]);
+
+  const loadUsers = async () => {
+    try {
+      if (ownerId) {
+        const usersList = await getUsersByOwner(ownerId);
+        setUsers(usersList);
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
   };
 
   // Filter sources based on search query
@@ -117,17 +127,20 @@ export default function SourcesPage() {
     setAddingSource(true);
     try {
       const result = await addSource(formData);
+      setAddingSource(false); // Remove loading immediately after operation
       if (result.success) {
         setIsModalOpen(false);
         showSuccess('تم إضافة المصدر بنجاح');
+        // Refresh invoices to update source counts
+        const invoices = await getInvoices();
+        setAllInvoices(invoices);
       } else {
         showError(result.error || 'فشل في إضافة المصدر');
       }
     } catch (error) {
+      setAddingSource(false);
       console.error('Error adding source:', error);
       showError('حدث خطأ أثناء إضافة المصدر');
-    } finally {
-      setAddingSource(false);
     }
   };
 
@@ -137,18 +150,21 @@ export default function SourcesPage() {
     setUpdatingSource(true);
     try {
       const result = await updateSource(editingSource.id, formData);
+      setUpdatingSource(false); // Remove loading immediately after operation
       if (result.success) {
         setIsEditModalOpen(false);
         setEditingSource(null);
         showSuccess('تم تحديث المصدر بنجاح');
+        // Refresh invoices to update source counts
+        const invoices = await getInvoices();
+        setAllInvoices(invoices);
       } else {
         showError(result.error || 'فشل في تحديث المصدر');
       }
     } catch (error) {
+      setUpdatingSource(false);
       console.error('Error updating source:', error);
       showError('حدث خطأ أثناء تحديث المصدر');
-    } finally {
-      setUpdatingSource(false);
     }
   };
 
@@ -158,18 +174,21 @@ export default function SourcesPage() {
     setDeletingSource(true);
     try {
       const result = await deleteSource(sourceToDelete.id);
+      setDeletingSource(false); // Remove loading immediately after operation
       if (result.success) {
         setIsDeleteModalOpen(false);
         setSourceToDelete(null);
         showSuccess('تم حذف المصدر بنجاح');
+        // Refresh invoices to update source counts
+        const invoices = await getInvoices();
+        setAllInvoices(invoices);
       } else {
         showError(result.error || 'فشل في حذف المصدر');
       }
     } catch (error) {
+      setDeletingSource(false);
       console.error('Error deleting source:', error);
       showError('حدث خطأ أثناء حذف المصدر');
-    } finally {
-      setDeletingSource(false);
     }
   };
 

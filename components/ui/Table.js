@@ -11,6 +11,7 @@ const actionIcons = {
   'حذف': HiTrash,
   'رجوع': HiArrowLeft,
   'سداد': HiCurrencyDollar,
+  'مرتجع': HiTrash, // استخدام أيقونة الحذف للمرتجع
 };
 
 export default function Table({ columns, data, actions, onAction, rowClassName }) {

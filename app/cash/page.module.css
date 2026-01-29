@@ -89,6 +89,19 @@
   text-align: center;
 }
 
+.negativeBalanceRow {
+  background-color: rgba(239, 68, 68, 0.05) !important;
+}
+
+.negativeBalanceRow:hover {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
+
+.negativeBalanceRow td:nth-child(2) {
+  color: #ef4444 !important;
+  font-weight: 700;
+}
+
 @media (max-width: 768px) {
   .container {
     padding: 12px;

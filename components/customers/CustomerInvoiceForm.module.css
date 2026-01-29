@@ -168,20 +168,64 @@
 }
 
 @media (max-width: 768px) {
-  .productsHeader,
-  .productRow {
-    grid-template-columns: 1fr;
+  .form {
+    gap: 16px;
+  }
+
+  .productSelection {
+    gap: 12px;
+  }
+
+  .productsTable {
+    padding: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .productsHeader {
+    grid-template-columns: 120px 60px 80px 80px 50px;
     gap: 8px;
+    padding: 8px 4px;
+    font-size: 12px;
+    min-width: 400px;
+  }
+
+  .productRow {
+    grid-template-columns: 120px 60px 80px 80px 50px;
+    gap: 8px;
+    padding: 8px 4px;
+    font-size: 13px;
+    min-width: 400px;
   }
 
   .productsHeader span,
   .productRow span {
-    display: flex;
-    justify-content: space-between;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .removeButton {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  .summary {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .summaryRow {
+    font-size: 14px;
   }
 
   .formActions {
     flex-direction: column;
+    gap: 8px;
+  }
+
+  .formActions button {
+    width: 100%;
   }
 }
 

@@ -3,13 +3,49 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
   background-color: var(--background-color);
   gap: 24px;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .title {
   font-size: 32px;
   font-weight: 700;
   color: var(--text-primary);
+  text-align: center;
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+    gap: 20px;
+    min-height: 100vh;
+    height: auto;
+  }
+
+  .title {
+    font-size: 24px;
+    font-weight: 600;
+    padding: 0 12px;
+    line-height: 1.5;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .title {
+    font-size: 20px;
+    font-weight: 600;
+    padding: 0 8px;
+    line-height: 1.6;
+  }
 }

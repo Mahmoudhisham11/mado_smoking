@@ -13,6 +13,8 @@ export default function CustomerInvoiceForm({
   stores = [], 
   products = [], 
   invoice = null, // For editing existing invoice
+  cashRegisters = [], // Cash registers for payment selection
+  getRegisterName = () => '', // Function to get register name
   onSave, 
   onCancel, 
   loading 
@@ -25,6 +27,7 @@ export default function CustomerInvoiceForm({
   });
   const [productsList, setProductsList] = useState([]);
   const [paidAmount, setPaidAmount] = useState('');
+  const [selectedCashRegisterId, setSelectedCashRegisterId] = useState('');
   const [errors, setErrors] = useState({});
   const [priceErrors, setPriceErrors] = useState({});
 
@@ -46,10 +49,12 @@ export default function CustomerInvoiceForm({
       }));
       setProductsList(formattedProducts);
       setPaidAmount((invoice.paidAmount || 0).toString());
+      setSelectedCashRegisterId(''); // Reset cash register for editing
     } else {
       // Reset form for new invoice
       setProductsList([]);
       setPaidAmount('');
+      setSelectedCashRegisterId('');
     }
   }, [invoice]);
 
@@ -279,19 +284,27 @@ export default function CustomerInvoiceForm({
       return;
     }
 
-    // Paid amount is optional - default to 0 if not provided
-    let paid = 0;
-    if (paidAmount.trim()) {
-      paid = parseFloat(paidAmount);
-      if (isNaN(paid) || paid < 0) {
-        setErrors({ general: 'المبلغ المدفوع غير صحيح' });
-        return;
-      }
+    // Paid amount is now required
+    if (!paidAmount.trim()) {
+      setErrors({ general: 'يجب إدخال المبلغ المدفوع' });
+      return;
+    }
 
-      if (paid > totalCost) {
-        setErrors({ general: 'المبلغ المدفوع لا يمكن أن يكون أكبر من الإجمالي' });
-        return;
-      }
+    const paid = parseFloat(paidAmount);
+    if (isNaN(paid) || paid < 0) {
+      setErrors({ general: 'المبلغ المدفوع غير صحيح' });
+      return;
+    }
+
+    if (paid > totalCost) {
+      setErrors({ general: 'المبلغ المدفوع لا يمكن أن يكون أكبر من الإجمالي' });
+      return;
+    }
+
+    // Cash register is required when paid amount > 0
+    if (paid > 0 && !selectedCashRegisterId) {
+      setErrors({ general: 'يجب اختيار العهدة عند وجود مبلغ مدفوع' });
+      return;
     }
 
     onSave({
@@ -309,6 +322,7 @@ export default function CustomerInvoiceForm({
       totalItems,
       totalCost,
       paidAmount: paid,
+      cashRegisterId: selectedCashRegisterId,
     });
   };
 
@@ -450,13 +464,37 @@ export default function CustomerInvoiceForm({
             label="المبلغ المدفوع"
             type="number"
             name="paidAmount"
-            placeholder="أدخل المبلغ المدفوع (اختياري)"
+            placeholder="أدخل المبلغ المدفوع (إلزامي)"
             value={paidAmount}
-            onChange={(e) => setPaidAmount(e.target.value)}
+            onChange={(e) => {
+              setPaidAmount(e.target.value);
+              setErrors({}); // Clear errors when user types
+              // Clear cash register selection if amount is cleared
+              if (!e.target.value || parseFloat(e.target.value) === 0) {
+                setSelectedCashRegisterId('');
+              }
+            }}
             icon={HiCurrencyDollar}
             min="0"
             step="0.01"
+            required
           />
+          {parseFloat(paidAmount) > 0 && (
+            <Select
+              label="السداد من العهدة"
+              placeholder="اختر العهدة (إلزامي)"
+              value={selectedCashRegisterId}
+              onChange={(e) => {
+                setSelectedCashRegisterId(e.target.value);
+                setErrors({}); // Clear errors when user selects
+              }}
+              options={cashRegisters.map((cr) => ({
+                value: cr.id,
+                label: `${getRegisterName(cr)} (الرصيد: ${(cr.balance || 0).toFixed(2)})`,
+              }))}
+              required
+            />
+          )}
           <div className={styles.summaryRow}>
             <span>المتبقي:</span>
             <span className={exceedsCreditLimit ? styles.exceedsLimit : ''}>

@@ -87,6 +87,7 @@ export default function SettingsPage() {
                 };
 
                 const result = await updateUserData(editingUser.uid, updateData);
+                setFormLoading(false); // Remove loading immediately after operation
 
                 if (result.success) {
                     // Also update role if changed
@@ -110,6 +111,7 @@ export default function SettingsPage() {
                     formData.role,
                     formData.isSubscribe
                 );
+                setFormLoading(false); // Remove loading immediately after operation
 
                 if (result.success) {
                     setShowUserForm(false);
@@ -130,10 +132,9 @@ export default function SettingsPage() {
                 }
             }
         } catch (err) {
+            setFormLoading(false);
             setError('حدث خطأ. يرجى المحاولة مرة أخرى.');
             console.error('Error saving user:', err);
-        } finally {
-            setFormLoading(false);
         }
     };
 
@@ -171,6 +172,7 @@ export default function SettingsPage() {
 
         try {
             const result = await deleteUserByOwner(userToDelete.uid);
+            setDeleteLoading(false); // Remove loading immediately after operation
 
             if (result.success) {
                 setShowDeleteModal(false);
@@ -189,10 +191,9 @@ export default function SettingsPage() {
                 setDeleteError(result.error || 'فشل في حذف المستخدم');
             }
         } catch (err) {
+            setDeleteLoading(false);
             setDeleteError('حدث خطأ. يرجى المحاولة مرة أخرى.');
             console.error('Error deleting user:', err);
-        } finally {
-            setDeleteLoading(false);
         }
     };
 

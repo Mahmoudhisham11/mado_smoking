@@ -21,7 +21,6 @@ import {
   updateExpense,
   deleteExpense,
   getUsersByOwner,
-  recalculateMainCashRegister,
   ensureAllUsersHaveCashRegisters
 } from '../../lib/firebase/firestore';
 import { getUserFromLocalStorage } from '../../lib/auth';
@@ -60,34 +59,64 @@ export default function CashPage() {
 
   useEffect(() => {
     const initializeData = async () => {
-      setLoading(true);
-      // Ensure all users have cash registers first
-      await ensureAllUsersHaveCashRegisters();
-      // Recalculate main cash register (for owner)
-      if (isOwner) {
-        await recalculateMainCashRegister();
-      }
+      // Run initialization operations in parallel for better performance
+      const operations = [];
+      
+      // Ensure all users have cash registers
+      operations.push(ensureAllUsersHaveCashRegisters());
+      
       // Load users for all users (to display register names)
-      await loadUsers();
+      operations.push(loadUsers());
+      
+      // Run all operations in parallel
+      await Promise.all(operations);
+      
+      // Remove loading immediately after operations complete
+      // Data will be updated automatically via subscriptions
       setLoading(false);
     };
     
     initializeData();
-  }, [isOwner]);
+  }, []);
 
   // Subscribe to cash registers with real-time updates
   useEffect(() => {
+    let isFirstLoad = true;
+    
+    // Get stable values for filtering
+    const ownerId = localUserData?.ownerId || localUserData?.uid || user?.uid;
+    const userId = localUserData?.uid || user?.uid;
+    const userRole = localUserData?.role || userData?.role || 'user';
+    const isOwnerValue = userRole === 'owner';
+    
     const unsubscribeRegisters = subscribeToCashRegisters((registersData) => {
-      // Filter out owner's personal register (userId === ownerId)
-      const ownerId = localUserData?.ownerId || localUserData?.uid || user?.uid;
-      const filteredRegisters = registersData.filter(reg => reg.userId !== ownerId);
+      // Filter registers based on user role
+      let filteredRegisters;
+      
+      if (isOwnerValue) {
+        // Owner: see all user registers + main register (userId === null)
+        // Filter out owner's personal register if it exists (userId === ownerId)
+        filteredRegisters = registersData.filter(reg => 
+          reg.userId === null || (reg.userId !== null && reg.userId !== ownerId)
+        );
+      } else {
+        // Regular user: see only their own register
+        filteredRegisters = registersData.filter(reg => reg.userId === userId);
+      }
+      
       setCashRegisters(filteredRegisters);
+      
+      // Remove loading on first data load
+      if (isFirstLoad) {
+        isFirstLoad = false;
+        setLoading(false);
+      }
     });
 
     return () => {
       if (unsubscribeRegisters) unsubscribeRegisters();
     };
-  }, [localUserData, user]);
+  }, [localUserData?.ownerId, localUserData?.uid, localUserData?.role, user?.uid, userData?.role]);
 
   // Subscribe to cash transfers with real-time updates
   useEffect(() => {
@@ -181,17 +210,19 @@ export default function CashPage() {
         );
       }
       
+      setAddingTransfer(false); // Remove loading immediately after operation
+      
       if (result.success) {
         setIsTransferModalOpen(false);
         setEditingTransfer(null);
+        // Data will be updated automatically via subscription
       } else {
         setTransferError(result.error || 'فشل في إجراء التحويل');
       }
     } catch (error) {
+      setAddingTransfer(false);
       console.error('Error adding/updating transfer:', error);
       setTransferError('حدث خطأ أثناء إجراء التحويل');
-    } finally {
-      setAddingTransfer(false);
     }
   };
 
@@ -217,17 +248,19 @@ export default function CashPage() {
         );
       }
       
+      setAddingExpense(false); // Remove loading immediately after operation
+      
       if (result.success) {
         setIsExpenseModalOpen(false);
         setEditingExpense(null);
+        // Data will be updated automatically via subscription
       } else {
         setExpenseError(result.error || 'فشل في تسجيل المصروف');
       }
     } catch (error) {
+      setAddingExpense(false);
       console.error('Error adding/updating expense:', error);
       setExpenseError('حدث خطأ أثناء تسجيل المصروف');
-    } finally {
-      setAddingExpense(false);
     }
   };
 
@@ -240,18 +273,19 @@ export default function CashPage() {
     setDeletingTransfer(true);
     try {
       const result = await deleteCashTransfer(transferToDelete.id);
+      setDeletingTransfer(false); // Remove loading immediately after operation
       
       if (result.success) {
         setIsDeleteTransferModalOpen(false);
         setTransferToDelete(null);
+        // Data will be updated automatically via subscription
       } else {
         setTransferError(result.error || 'فشل في حذف التحويل');
       }
     } catch (error) {
+      setDeletingTransfer(false);
       console.error('Error deleting transfer:', error);
       setTransferError('حدث خطأ أثناء حذف التحويل');
-    } finally {
-      setDeletingTransfer(false);
     }
   };
 
@@ -264,18 +298,19 @@ export default function CashPage() {
     setDeletingExpense(true);
     try {
       const result = await deleteExpense(expenseToDelete.id);
+      setDeletingExpense(false); // Remove loading immediately after operation
       
       if (result.success) {
         setIsDeleteExpenseModalOpen(false);
         setExpenseToDelete(null);
+        // Data will be updated automatically via subscription
       } else {
         setExpenseError(result.error || 'فشل في حذف المصروف');
       }
     } catch (error) {
+      setDeletingExpense(false);
       console.error('Error deleting expense:', error);
       setExpenseError('حدث خطأ أثناء حذف المصروف');
-    } finally {
-      setDeletingExpense(false);
     }
   };
 
@@ -290,13 +325,19 @@ export default function CashPage() {
   };
 
   // Prepare table data for cash registers
-  const registersTableData = cashRegisters.map((register) => ({
-    id: register.id,
-    name: getRegisterName(register),
-    balance: (register.balance || 0).toFixed(2),
-    updatedAt: register.updatedAt ? new Date(register.updatedAt).toLocaleDateString('ar-EG') : '-',
-    originalRegister: register,
-  }));
+  const registersTableData = cashRegisters.map((register) => {
+    const balance = register.balance || 0;
+    const isNegative = balance < 0;
+    return {
+      id: register.id,
+      name: getRegisterName(register),
+      balance: balance.toFixed(2),
+      balanceValue: balance, // Store numeric value for styling
+      isNegative, // Flag for negative balance styling
+      updatedAt: register.updatedAt ? new Date(register.updatedAt).toLocaleDateString('ar-EG') : '-',
+      originalRegister: register,
+    };
+  });
 
   // Prepare table data for transfers
   const transfersTableData = transfers.map((transfer) => {
@@ -425,6 +466,7 @@ export default function CashPage() {
               data={registersTableData.filter(row => 
                 !searchQuery || row.name.toLowerCase().includes(searchQuery.toLowerCase())
               )}
+              rowClassName={(row) => row.isNegative ? styles.negativeBalanceRow : ''}
             />
           )}
 

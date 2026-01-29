@@ -27,8 +27,11 @@ import {
   deleteCustomerPayment,
   returnCustomerInvoice,
   returnCustomerInvoiceProduct,
-  getUsersByOwner
+  getUsersByOwner,
+  updateCashRegisterBalance
 } from '../../../lib/firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../../../lib/firebase/config';
 import { getUserFromLocalStorage } from '../../../lib/auth';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
@@ -181,6 +184,37 @@ export default function CustomerDetailsPage() {
       });
       
       if (result.success) {
+        // إذا كان هناك مبلغ مدفوع وعهدة محددة، قم بزيادة رصيد العهدة مباشرة
+        // لأن الفاتورة تم إنشاؤها بالفعل مع paidAmount، لا حاجة لاستخدام addCustomerPayment
+        if (invoiceData.paidAmount > 0 && invoiceData.cashRegisterId) {
+          try {
+            // زيادة رصيد العهدة مباشرة (money in)
+            await updateCashRegisterBalance(invoiceData.cashRegisterId, invoiceData.paidAmount);
+            
+            // الحصول على userId و ownerId
+            const localUserData = getUserFromLocalStorage();
+            const userId = localUserData?.uid || user?.uid;
+            const ownerId = localUserData?.ownerId || localUserData?.uid || user?.uid;
+            
+            // تسجيل السداد في customerPayments collection
+            const paymentsRef = collection(db, 'customerPayments');
+            await addDoc(paymentsRef, {
+              customerId: customerId,
+              amount: invoiceData.paidAmount,
+              cashRegisterId: invoiceData.cashRegisterId,
+              invoiceIds: [result.id], // ربط السداد بالفاتورة الجديدة (array format)
+              userId: userId,
+              ownerId: ownerId || userId,
+              date: new Date(),
+              createdAt: new Date(),
+            });
+          } catch (error) {
+            console.error('Error recording payment:', error);
+            // لا نوقف العملية، فقط نسجل الخطأ
+            showError(`تم إنشاء الفاتورة لكن حدث خطأ في تسجيل السداد: ${error.message}`);
+          }
+        }
+        
         setIsInvoiceModalOpen(false);
         showSuccess('تم إضافة الفاتورة بنجاح');
       } else {
@@ -578,6 +612,8 @@ export default function CustomerDetailsPage() {
               customer={customer}
               stores={stores}
               products={products}
+              cashRegisters={cashRegisters}
+              getRegisterName={getRegisterName}
               onSave={handleAddInvoice}
               onCancel={() => setIsInvoiceModalOpen(false)}
               loading={addingInvoice}
@@ -599,6 +635,8 @@ export default function CustomerDetailsPage() {
                 customer={customer}
                 stores={stores}
                 products={products}
+                cashRegisters={cashRegisters}
+                getRegisterName={getRegisterName}
                 invoice={editingInvoice}
                 onSave={handleUpdateInvoice}
                 onCancel={() => {
@@ -670,34 +708,32 @@ export default function CustomerDetailsPage() {
 
                 <div className={styles.productsList}>
                   <h3>المنتجات</h3>
-                  <div className={styles.productsTable}>
-                    <div className={styles.productsHeader}>
-                      <span>المنتج</span>
-                      <span>الكمية</span>
-                      <span>السعر</span>
-                      <span>الإجمالي</span>
-                      {selectedInvoice.status !== 'returned' && <span>الإجراءات</span>}
-                    </div>
-                    {selectedInvoice.products?.map((product, index) => {
+                  <Table
+                    columns={[
+                      { key: 'name', label: 'المنتج' },
+                      { key: 'quantity', label: 'الكمية' },
+                      { key: 'price', label: 'السعر' },
+                      { key: 'total', label: 'الإجمالي' },
+                    ]}
+                    data={selectedInvoice.products?.map((product, index) => {
                       const productTotal = (product.finalPrice || 0) * (product.quantity || 0);
-                      return (
-                        <div key={index} className={styles.productRow}>
-                          <span>{product.name}</span>
-                          <span>{product.quantity}</span>
-                          <span>{product.finalPrice}</span>
-                          <span>{productTotal.toFixed(2)}</span>
-                          {selectedInvoice.status !== 'returned' && (
-                            <button
-                              onClick={() => handleReturnProduct(index)}
-                              className={styles.returnButton}
-                            >
-                              مرتجع
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                      return {
+                        id: index,
+                        name: product.name,
+                        quantity: product.quantity,
+                        price: (product.finalPrice || 0).toFixed(2),
+                        total: productTotal.toFixed(2),
+                        originalProduct: product,
+                        productIndex: index,
+                      };
+                    }) || []}
+                    actions={selectedInvoice.status !== 'returned' ? ['مرتجع'] : []}
+                    onAction={(action, row) => {
+                      if (action === 'مرتجع' && row.productIndex !== undefined) {
+                        handleReturnProduct(row.productIndex);
+                      }
+                    }}
+                  />
                 </div>
               </div>
             )}

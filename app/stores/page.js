@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthGuard from '../../components/auth/AuthGuard';
 import MainLayout from '../../components/layout/MainLayout';
@@ -34,52 +34,19 @@ export default function StoresPage() {
   const [deletingStore, setDeletingStore] = useState(false);
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [allProducts, setAllProducts] = useState([]);
   const router = useRouter();
 
   const userRole = localUserData?.role || userData?.role || 'user';
   const isOwner = userRole === 'owner';
   const ownerId = localUserData?.ownerId || localUserData?.uid || user?.uid;
 
-  useEffect(() => {
-    // Load users for owner
-    if (isOwner && ownerId) {
-      loadUsers();
-    }
-    
-    // Delete products with zero quantity on initial load
-    deleteZeroQuantityProducts();
-    
-    // Subscribe to stores with real-time updates
-    setLoading(true);
-    const unsubscribe = subscribeToStores((storesData) => {
-      updateStoresData(storesData);
-      setLoading(false);
-    });
-    
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [isOwner, ownerId]);
-
-  const loadUsers = async () => {
+  const updateStoresData = useCallback((storesData) => {
     try {
-      if (ownerId) {
-        const usersList = await getUsersByOwner(ownerId);
-        setUsers(usersList);
-      }
-    } catch (error) {
-      console.error('Error loading users:', error);
-    }
-  };
-
-  const updateStoresData = async (storesData) => {
-    try {
-      // Get all products to calculate counts and values
-      const allProducts = await getProducts();
-      
+      // Use products from state instead of fetching every time
       // Calculate products count and total value for each store
       const transformedData = storesData.map((store) => {
-        // Get products for this store
+        // Get products for this store from state
         const storeProducts = allProducts.filter(
           (product) => product.storeId === store.id
         );
@@ -108,6 +75,49 @@ export default function StoresPage() {
     } catch (error) {
       console.error('Error updating stores data:', error);
     }
+  }, [allProducts]);
+
+  useEffect(() => {
+    // Load users for owner
+    if (isOwner && ownerId) {
+      loadUsers();
+    }
+    
+    // Delete products with zero quantity on initial load
+    deleteZeroQuantityProducts();
+    
+    // Load products once and keep in state
+    const loadProducts = async () => {
+      try {
+        const products = await getProducts();
+        setAllProducts(products);
+      } catch (error) {
+        console.error('Error loading products:', error);
+      }
+    };
+    loadProducts();
+    
+    // Subscribe to stores with real-time updates
+    setLoading(true);
+    const unsubscribe = subscribeToStores((storesData) => {
+      updateStoresData(storesData);
+      setLoading(false);
+    });
+    
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [isOwner, ownerId, updateStoresData]);
+
+  const loadUsers = async () => {
+    try {
+      if (ownerId) {
+        const usersList = await getUsersByOwner(ownerId);
+        setUsers(usersList);
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
   };
 
   // Calculate statistics
@@ -133,17 +143,20 @@ export default function StoresPage() {
     setAddingStore(true);
     try {
       const result = await addStore(formData);
+      setAddingStore(false); // Remove loading immediately after operation
       if (result.success) {
         setIsModalOpen(false);
         showSuccess('تم إضافة المخزن بنجاح');
+        // Refresh products to update store counts
+        const products = await getProducts();
+        setAllProducts(products);
       } else {
         showError(result.error || 'فشل في إضافة المخزن');
       }
     } catch (error) {
+      setAddingStore(false);
       console.error('Error adding store:', error);
       showError('حدث خطأ أثناء إضافة المخزن');
-    } finally {
-      setAddingStore(false);
     }
   };
 
@@ -153,18 +166,21 @@ export default function StoresPage() {
     setUpdatingStore(true);
     try {
       const result = await updateStore(editingStore.id, formData);
+      setUpdatingStore(false); // Remove loading immediately after operation
       if (result.success) {
         setIsEditModalOpen(false);
         setEditingStore(null);
         showSuccess('تم تحديث المخزن بنجاح');
+        // Refresh products to update store counts
+        const products = await getProducts();
+        setAllProducts(products);
       } else {
         showError(result.error || 'فشل في تحديث المخزن');
       }
     } catch (error) {
+      setUpdatingStore(false);
       console.error('Error updating store:', error);
       showError('حدث خطأ أثناء تحديث المخزن');
-    } finally {
-      setUpdatingStore(false);
     }
   };
 
@@ -188,18 +204,21 @@ export default function StoresPage() {
     setDeleteError('');
     try {
       const result = await deleteStore(storeToDelete.id);
+      setDeletingStore(false); // Remove loading immediately after operation
       if (result.success) {
         setIsDeleteModalOpen(false);
         setStoreToDelete(null);
         showSuccess('تم حذف المخزن بنجاح');
+        // Refresh products to update store counts
+        const products = await getProducts();
+        setAllProducts(products);
       } else {
         setDeleteError(result.error || 'حدث خطأ أثناء حذف المخزن');
       }
     } catch (error) {
+      setDeletingStore(false);
       console.error('Error deleting store:', error);
       setDeleteError('حدث خطأ أثناء حذف المخزن');
-    } finally {
-      setDeletingStore(false);
     }
   };
 

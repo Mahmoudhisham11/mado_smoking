@@ -108,10 +108,10 @@ export default function HomePage() {
         });
         
         setTodayInvoices(invoicesWithCustomers);
+        setLoading(false); // Remove loading immediately after success
       } catch (error) {
+        setLoading(false); // Remove loading on error
         console.error('Error loading data:', error);
-      } finally {
-        setLoading(false);
       }
     };
     

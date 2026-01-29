@@ -164,6 +164,13 @@ export default function CustomersPage() {
         result = await addCustomer(formData);
       }
       
+      // Remove loading immediately after operation
+      if (editingCustomer) {
+        setUpdatingCustomer(false);
+      } else {
+        setSavingCustomer(false);
+      }
+      
       if (result.success) {
         setIsModalOpen(false);
         setEditingCustomer(null);
@@ -172,14 +179,14 @@ export default function CustomersPage() {
         setFormError(result.error || 'فشل في حفظ العميل');
       }
     } catch (error) {
-      setFormError('حدث خطأ. يرجى المحاولة مرة أخرى.');
-      console.error('Error saving customer:', error);
-    } finally {
+      // Remove loading on error
       if (editingCustomer) {
         setUpdatingCustomer(false);
       } else {
         setSavingCustomer(false);
       }
+      setFormError('حدث خطأ. يرجى المحاولة مرة أخرى.');
+      console.error('Error saving customer:', error);
     }
   };
 
@@ -196,6 +203,7 @@ export default function CustomersPage() {
     setDeletingCustomer(true);
     try {
       const result = await deleteCustomer(customerToDelete.id);
+      setDeletingCustomer(false); // Remove loading immediately after operation
       if (result.success) {
         setIsDeleteModalOpen(false);
         setCustomerToDelete(null);
@@ -204,10 +212,9 @@ export default function CustomersPage() {
         setDeleteError(result.error || 'حدث خطأ أثناء حذف العميل');
       }
     } catch (error) {
+      setDeletingCustomer(false);
       console.error('Error deleting customer:', error);
       setDeleteError('حدث خطأ أثناء حذف العميل');
-    } finally {
-      setDeletingCustomer(false);
     }
   };
 

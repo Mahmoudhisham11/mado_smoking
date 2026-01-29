@@ -45,6 +45,7 @@ export default function SourceDetailsPage() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentError, setPaymentError] = useState('');
   const [selectedCashRegisterId, setSelectedCashRegisterId] = useState('');
+  const [initialPaymentCashRegisterId, setInitialPaymentCashRegisterId] = useState(''); // للعهدة عند إنشاء الفاتورة
   const [cashRegisters, setCashRegisters] = useState([]);
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -240,6 +241,20 @@ export default function SourceDetailsPage() {
           await addProduct(product);
         }
 
+        // إذا كان هناك مبلغ مسدد وعهدة محددة، قم بخصم المبلغ من العهدة وتسجيله كمصروف
+        if (paidAmount > 0 && initialPaymentCashRegisterId) {
+          try {
+            const paymentResult = await addPayment(sourceId, paidAmount, initialPaymentCashRegisterId);
+            if (!paymentResult.success) {
+              console.error('Failed to record initial payment:', paymentResult.error);
+              // لا نوقف العملية، فقط نسجل الخطأ
+            }
+          } catch (error) {
+            console.error('Error recording initial payment:', error);
+            // لا نوقف العملية، فقط نسجل الخطأ
+          }
+        }
+
         // Reset everything and get next code
         setCurrentProduct({
           productName: '',
@@ -252,6 +267,7 @@ export default function SourceDetailsPage() {
         });
         setProductsList([]);
         setPaymentAmount('');
+        setInitialPaymentCashRegisterId('');
         await loadNextProductCode();
         setIsInvoiceModalOpen(false);
       } else {
@@ -605,6 +621,9 @@ export default function SourceDetailsPage() {
                 category: '',
                 storeId: '',
               });
+              setPaymentAmount('');
+              setInitialPaymentCashRegisterId('');
+              setPaymentError('');
             }}
             title="إضافة فاتورة"
             footer={modalFooter}
@@ -747,8 +766,29 @@ export default function SourceDetailsPage() {
                         value={paymentAmount}
                         onChange={(e) => {
                           setPaymentAmount(e.target.value);
+                          setPaymentError('');
+                          // إذا تم مسح المبلغ، امسح اختيار العهدة أيضاً
+                          if (!e.target.value || parseFloat(e.target.value) === 0) {
+                            setInitialPaymentCashRegisterId('');
+                          }
                         }}
                       />
+                      {parseFloat(paymentAmount) > 0 && (
+                        <Select
+                          label="السداد من العهدة"
+                          placeholder="اختر العهدة (إلزامي عند السداد)"
+                          value={initialPaymentCashRegisterId}
+                          onChange={(e) => {
+                            setInitialPaymentCashRegisterId(e.target.value);
+                            setPaymentError('');
+                          }}
+                          options={cashRegisters.map((cr) => ({
+                            value: cr.id,
+                            label: `${getRegisterName(cr)} (الرصيد: ${(cr.balance || 0).toFixed(2)})`,
+                          }))}
+                          required={parseFloat(paymentAmount) > 0}
+                        />
+                      )}
                       <Input
                         label="المتبقي"
                         type="text"
@@ -947,14 +987,23 @@ export default function SourceDetailsPage() {
               />
               <Select
                 label="السداد من العهدة"
-                placeholder="اختر العهدة"
+                placeholder="اختر العهدة (إلزامي)"
                 value={selectedCashRegisterId}
-                onChange={(e) => setSelectedCashRegisterId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedCashRegisterId(e.target.value);
+                  setPaymentError('');
+                }}
                 options={cashRegisters.map((cr) => ({
                   value: cr.id,
                   label: `${getRegisterName(cr)} (الرصيد: ${(cr.balance || 0).toFixed(2)})`,
                 }))}
+                required
               />
+              {paymentError && (
+                <div className={styles.errorMessage} style={{ marginTop: '12px' }}>
+                  {paymentError}
+                </div>
+              )}
             </div>
           </Modal>
 

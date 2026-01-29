@@ -249,16 +249,6 @@
     flex-direction: column;
   }
 
-  .productsHeader,
-  .productRow {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .productsHeader span,
-  .productRow span {
-    display: flex;
-    justify-content: space-between;
-  }
+  /* Products table responsive styling is handled by Table component */
 }
 
