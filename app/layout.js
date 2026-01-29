@@ -14,17 +14,10 @@ export const metadata = {
   title: "نظام نقاط البيع - مادو للتدخين",
   description: "نظام إدارة نقاط البيع للتدخين",
   manifest: "/manifest.json",
-  themeColor: "#000000",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "مادو للتدخين",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
   },
   icons: {
     icon: [
@@ -35,6 +28,14 @@ export const metadata = {
       { url: "/apple-icon.svg", sizes: "180x180", type: "image/svg+xml" },
     ],
   },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#000000",
 };
 
 export default function RootLayout({ children }) {
