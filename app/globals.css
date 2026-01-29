@@ -1,0 +1,159 @@
+:root {
+  --primary-color: #22c55e;
+  --primary-color-rgb: 34, 197, 94;
+  --border-radius: 12px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark Mode (Default) */
+:root[data-theme="dark"],
+:root:not([data-theme]) {
+  --background-color: #0f0f0f;
+  --card-color: #1a1a1a;
+  --text-primary: #ffffff;
+  --text-secondary: #a3a3a3;
+  --text-secondary-rgb: 163, 163, 163;
+}
+
+/* Light Mode */
+:root[data-theme="light"] {
+  --background-color: #ffffff;
+  --card-color: #f5f5f5;
+  --text-primary: #1a1a1a;
+  --text-secondary: #6b7280;
+  --text-secondary-rgb: 107, 114, 128;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  font-family: var(--font-tajawal), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background: var(--background-color);
+  color: var(--text-primary);
+  direction: rtl;
+  text-align: right;
+  font-family: var(--font-tajawal), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+body {
+  font-family: var(--font-tajawal), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--background-color);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+/* Apply Tajawal font to all text elements */
+h1, h2, h3, h4, h5, h6,
+p, span, div, a, button, input, textarea, select,
+label, li, td, th, caption {
+  font-family: var(--font-tajawal), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--card-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
+}
+
+/* Loading Spinner Animation */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* RTL Support */
+[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .flex-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] input,
+[dir="rtl"] textarea,
+[dir="rtl"] select {
+  text-align: right;
+  direction: rtl;
+}
+
+/* Sidebar Styles */
+@media (min-width: 768px) {
+  .sidebar {
+    display: flex !important;
+  }
+  
+  .desktop-content {
+    margin-right: 260px;
+  }
+  
+  .bottom-nav {
+    display: none !important;
+  }
+  
+  .mobile-content {
+    padding-bottom: 0 !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .sidebar {
+    display: none !important;
+  }
+  
+  .desktop-content {
+    margin-right: 0 !important;
+  }
+  
+  .bottom-nav {
+    display: flex !important;
+  }
+  
+  .mobile-content {
+    padding-bottom: 80px !important;
+  }
+}

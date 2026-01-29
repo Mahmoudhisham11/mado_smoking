@@ -1,0 +1,106 @@
+.tableContainer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.tableWrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: var(--border-radius);
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background-color: var(--card-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  background-color: rgba(var(--text-secondary-rgb), 0.08);
+  color: var(--text-primary);
+  padding: 16px 20px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  border-bottom: 2px solid rgba(var(--text-secondary-rgb), 0.15);
+  letter-spacing: 0.3px;
+}
+
+.cell {
+  padding: 16px 20px;
+  color: var(--text-primary);
+  font-size: 14px;
+  border-bottom: 1px solid rgba(var(--text-secondary-rgb), 0.08);
+  transition: background-color 0.2s ease;
+  text-align: center;
+}
+
+.row {
+  transition: all 0.2s ease;
+}
+
+.row:hover {
+  background-color: rgba(var(--text-secondary-rgb), 0.03);
+}
+
+.actionsContainer {
+  display: flex;
+  gap: 8px;
+  flex-direction: row-reverse;
+  justify-content: center;
+}
+
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(var(--primary-color-rgb), 0.1);
+  border: 1px solid rgba(var(--primary-color-rgb), 0.2);
+  color: var(--primary-color);
+  cursor: pointer;
+  padding: 8px 14px;
+  margin-left: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.actionButton:hover {
+  background: rgba(var(--primary-color-rgb), 0.15);
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(var(--primary-color-rgb), 0.2);
+}
+
+.actionButtonDelete {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.actionButtonDelete:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.2);
+}
+
+.emptyCell {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px 20px;
+  font-size: 15px;
+}
+
+
+
+
+

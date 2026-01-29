@@ -1,0 +1,64 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.selectWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.select {
+  width: 100%;
+  padding: 14px 20px;
+  padding-left: 40px;
+  background-color: var(--background-color);
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.25);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 15px;
+  outline: none;
+  direction: rtl;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a3a3a3' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 16px center;
+  cursor: pointer;
+}
+
+.select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.15);
+}
+
+.select:hover {
+  border-color: rgba(var(--text-secondary-rgb), 0.4);
+}
+
+.select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.select option {
+  background-color: var(--card-color);
+  color: var(--text-primary);
+  padding: 12px;
+}
+
+.error {
+  font-size: 13px;
+  color: #ef4444;
+  margin-top: 4px;
+}
+

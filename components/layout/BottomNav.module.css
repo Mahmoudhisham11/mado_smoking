@@ -1,0 +1,182 @@
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--card-color);
+  border-top: 1px solid rgba(var(--text-secondary-rgb), 0.2);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 16px 12px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 100;
+  gap: 12px;
+}
+
+.navItem {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 28px;
+  transition: all 0.25s ease;
+  position: relative;
+  background-color: #141414;
+  min-width: 48px;
+  height: 48px;
+  justify-content: center;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Dark mode inactive state */
+:root[data-theme="dark"] .navItem,
+:root:not([data-theme]) .navItem {
+  background-color: #141414;
+}
+
+/* Light mode inactive state */
+:root[data-theme="light"] .navItem {
+  background-color: #e5e5e5;
+}
+
+.navItem:hover {
+  transform: scale(1.02);
+}
+
+.navItem:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.navItemActive {
+  background-color: #6CFF3F;
+  padding: 0 4px;
+  min-width: auto;
+}
+
+/* Dark mode active state */
+:root[data-theme="dark"] .navItemActive,
+:root:not([data-theme]) .navItemActive {
+  background-color: #6CFF3F;
+}
+
+/* Light mode active state */
+:root[data-theme="light"] .navItemActive {
+  background-color: #6CFF3F;
+}
+
+.navItemClicked {
+  transform: scale(0.95);
+  animation: clickAnimation 0.3s ease;
+}
+
+@keyframes clickAnimation {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.iconWrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.iconWrapperActive {
+  background-color: #6CFF3F;
+}
+
+.icon {
+  font-size: 20px;
+  transition: all 0.25s ease;
+}
+
+/* Dark mode inactive icon */
+:root[data-theme="dark"] .icon,
+:root:not([data-theme]) .icon {
+  color: #8A8A8A;
+}
+
+/* Light mode inactive icon */
+:root[data-theme="light"] .icon {
+  color: #6b7280;
+}
+
+.iconWrapperActive .icon {
+  color: #0B0F0C;
+}
+
+.label {
+  display: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0B0F0C;
+  padding: 0 16px;
+  white-space: nowrap;
+  transition: all 0.25s ease;
+  opacity: 0;
+  transform: translateX(-8px);
+  animation: labelFadeIn 0.25s ease forwards;
+}
+
+@keyframes labelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.navItemActive .label {
+  display: block;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .nav {
+    padding: 12px 8px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+
+  .navItem {
+    min-width: 44px;
+    height: 44px;
+    border-radius: 22px;
+  }
+
+  .iconWrapper {
+    width: 32px;
+    height: 32px;
+  }
+
+  .icon {
+    font-size: 18px;
+  }
+
+  .label {
+    font-size: 13px;
+    padding: 0 12px;
+  }
+}
+
+

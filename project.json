@@ -1,0 +1,103 @@
+{
+  "component": "VerticalNavBar",
+  "orientation": "vertical",
+  "theme": "dark",
+  "background": {
+    "color": "#0B0F0C",
+    "blur": false
+  },
+  "layout": {
+    "width": 260,
+    "itemHeight": 56,
+    "gapBetweenItems": 12,
+    "padding": {
+      "top": 16,
+      "bottom": 16,
+      "left": 12,
+      "right": 12
+    }
+  },
+  "navItems": [
+    {
+      "id": "home",
+      "label": "Home",
+      "icon": "home",
+      "route": "/",
+      "active": true
+    },
+    {
+      "id": "portfolio",
+      "label": "Portfolio",
+      "icon": "briefcase",
+      "route": "/portfolio",
+      "active": false
+    },
+    {
+      "id": "watchlist",
+      "label": "Watchlist",
+      "icon": "bitcoin-refresh",
+      "route": "/watchlist",
+      "active": false
+    },
+    {
+      "id": "markets",
+      "label": "Markets",
+      "icon": "globe",
+      "route": "/markets",
+      "active": false
+    }
+  ],
+  "itemStyle": {
+    "container": {
+      "borderRadius": 28,
+      "backgroundColor": "#141414",
+      "hoverBackgroundColor": "#1C1C1C",
+      "transition": "all 0.25s ease"
+    },
+    "icon": {
+      "size": 20,
+      "inactiveColor": "#8A8A8A",
+      "activeColor": "#0B0F0C",
+      "containerSize": 36,
+      "containerRadius": "50%"
+    },
+    "label": {
+      "fontSize": 14,
+      "fontWeight": 500,
+      "inactiveColor": "#8A8A8A",
+      "activeColor": "#0B0F0C"
+    }
+  },
+  "activeState": {
+    "backgroundColor": "#6CFF3F",
+    "iconBackgroundColor": "#6CFF3F",
+    "textVisible": true,
+    "iconPosition": "left"
+  },
+  "inactiveState": {
+    "backgroundColor": "#141414",
+    "iconBackgroundColor": "#141414",
+    "textVisible": false,
+    "iconPosition": "center"
+  },
+  "interaction": {
+    "onHover": {
+      "scale": 1.02
+    },
+    "onClick": {
+      "setActive": true,
+      "navigate": true
+    }
+  },
+  "behaviorRules": [
+    "Only one nav item can be active at a time",
+    "Active item expands horizontally to show label",
+    "Inactive items stay circular with icon only",
+    "Active item uses bright green accent color"
+  ],
+  "accessibility": {
+    "ariaRole": "navigation",
+    "keyboardNavigation": true,
+    "focusOutline": true
+  }
+}

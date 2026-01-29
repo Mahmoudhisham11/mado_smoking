@@ -1,0 +1,75 @@
+.container {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: var(--card-color);
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.3);
+  border-radius: var(--border-radius);
+  color: var(--text-primary);
+  font-size: 16px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  border-color: var(--primary-color);
+}
+
+.inputWithIcon {
+  padding-left: 44px;
+}
+
+.inputWithPassword {
+  padding-right: 44px;
+}
+
+.inputWithIconAndPassword {
+  padding-left: 44px;
+  padding-right: 44px;
+}
+
+.icon {
+  position: absolute;
+  left: 16px;
+  color: var(--text-secondary);
+  font-size: 18px;
+  pointer-events: none;
+}
+
+.eyeIcon {
+  position: absolute;
+  right: 16px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.error {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+
+
+
+

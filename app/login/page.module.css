@@ -1,0 +1,146 @@
+.container {
+  min-height: 100vh;
+  background-color: var(--background-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+  background-color: var(--card-color);
+  border-radius: 20px;
+  padding: 48px;
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.header {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.description {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.form {
+  margin-bottom: 24px;
+}
+
+.error {
+  color: #ef4444;
+  font-size: 14px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: #ef444415;
+  border-radius: 8px;
+  border: 1px solid #ef444430;
+  text-align: center;
+}
+
+.forgotPassword {
+  color: var(--primary-color);
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: left;
+  display: block;
+  margin-top: 8px;
+  margin-bottom: 24px;
+  transition: all 0.2s ease;
+}
+
+.forgotPassword:hover {
+  text-decoration: underline;
+}
+
+.submitButton {
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 24px 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.dividerLine {
+  flex: 1;
+  height: 1px;
+  background-color: rgba(var(--text-secondary-rgb), 0.3);
+}
+
+.dividerText {
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.socialButton {
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--border-radius);
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.2);
+  background-color: var(--card-color);
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+  margin-bottom: 24px;
+}
+
+.socialButton:hover {
+  background-color: rgba(var(--text-secondary-rgb), 0.1);
+  border-color: var(--primary-color);
+}
+
+.socialButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.signupLink {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.signupLinkText {
+  color: var(--primary-color);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.signupLinkText:hover {
+  text-decoration: underline;
+}
+
+
+
+
+

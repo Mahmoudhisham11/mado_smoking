@@ -1,0 +1,76 @@
+.button {
+  padding: 12px 24px;
+  border-radius: var(--border-radius);
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.button:not(:disabled) {
+  cursor: pointer;
+}
+
+/* Variants */
+.primary {
+  background-color: var(--primary-color);
+  color: #ffffff;
+}
+
+.secondary {
+  background-color: var(--card-color);
+  color: var(--text-primary);
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.2);
+}
+
+.outline {
+  background-color: transparent;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+}
+
+.danger {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+.primary:disabled,
+.secondary:disabled,
+.outline:disabled,
+.danger:disabled {
+  opacity: 0.5;
+}
+
+/* Spinner */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+
+.secondary .spinner,
+.outline .spinner {
+  border-color: rgba(var(--text-secondary-rgb), 0.3);
+  border-top-color: var(--primary-color);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
