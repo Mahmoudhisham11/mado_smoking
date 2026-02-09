@@ -11,8 +11,8 @@ import Card from '../../../components/ui/Card';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
-import { getStore, getProducts, getStores, transferProducts, deleteZeroQuantityProducts, deleteProduct } from '../../../lib/firebase/firestore';
-import { HiCube, HiCurrencyDollar, HiTrendingUp, HiPlus, HiTrash } from 'react-icons/hi';
+import { getStore, getProducts, getStores, transferProducts, deleteZeroQuantityProducts, deleteProduct, updateProduct } from '../../../lib/firebase/firestore';
+import { HiCube, HiCurrencyDollar, HiTrendingUp, HiPlus, HiTrash, HiPencil } from 'react-icons/hi';
 import styles from './page.module.css';
 
 export default function StoreDetailsPage() {
@@ -31,10 +31,20 @@ export default function StoreDetailsPage() {
   });
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isDeleteProductModalOpen, setIsDeleteProductModalOpen] = useState(false);
+  const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [productToEdit, setProductToEdit] = useState(null);
+  const [editProductData, setEditProductData] = useState({
+    quantity: '',
+    wholesalePrice: '',
+    sellPrice: '',
+    finalPrice: '',
+  });
   const [transferError, setTransferError] = useState('');
   const [quantityError, setQuantityError] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  const [editError, setEditError] = useState('');
+  const [updatingProduct, setUpdatingProduct] = useState(false);
 
   useEffect(() => {
     if (storeId) {
@@ -185,6 +195,79 @@ export default function StoreDetailsPage() {
     setDeleteError('');
   };
 
+  const handleEditProduct = (product) => {
+    setProductToEdit(product);
+    setEditProductData({
+      quantity: product.quantity?.toString() || '',
+      wholesalePrice: product.wholesalePrice?.toString() || '',
+      sellPrice: product.sellPrice?.toString() || '',
+      finalPrice: product.finalPrice?.toString() || '',
+    });
+    setIsEditProductModalOpen(true);
+    setEditError('');
+  };
+
+  const confirmEditProduct = async () => {
+    if (!productToEdit) return;
+
+    setEditError('');
+    
+    // التحقق من صحة البيانات
+    const quantity = parseInt(editProductData.quantity);
+    const wholesalePrice = parseFloat(editProductData.wholesalePrice);
+    const sellPrice = parseFloat(editProductData.sellPrice);
+    const finalPrice = parseFloat(editProductData.finalPrice);
+
+    if (isNaN(quantity) || quantity < 0) {
+      setEditError('الكمية يجب أن تكون رقماً صحيحاً أكبر من أو يساوي صفر');
+      return;
+    }
+
+    if (isNaN(wholesalePrice) || wholesalePrice < 0) {
+      setEditError('سعر الجملة يجب أن يكون رقماً صحيحاً أكبر من أو يساوي صفر');
+      return;
+    }
+
+    if (isNaN(sellPrice) || sellPrice < 0) {
+      setEditError('سعر البيع يجب أن يكون رقماً صحيحاً أكبر من أو يساوي صفر');
+      return;
+    }
+
+    if (isNaN(finalPrice) || finalPrice < 0) {
+      setEditError('السعر النهائي يجب أن يكون رقماً صحيحاً أكبر من أو يساوي صفر');
+      return;
+    }
+
+    setUpdatingProduct(true);
+    try {
+      const result = await updateProduct(productToEdit.id, {
+        quantity,
+        wholesalePrice,
+        sellPrice,
+        finalPrice,
+      });
+      
+      if (result.success) {
+        setIsEditProductModalOpen(false);
+        setProductToEdit(null);
+        setEditProductData({
+          quantity: '',
+          wholesalePrice: '',
+          sellPrice: '',
+          finalPrice: '',
+        });
+        loadStoreData();
+      } else {
+        setEditError(result.error || 'حدث خطأ أثناء تعديل المنتج');
+      }
+    } catch (error) {
+      console.error('Error updating product:', error);
+      setEditError('حدث خطأ أثناء تعديل المنتج');
+    } finally {
+      setUpdatingProduct(false);
+    }
+  };
+
   const confirmDeleteProduct = async () => {
     if (!productToDelete) return;
 
@@ -208,7 +291,6 @@ export default function StoreDetailsPage() {
   const columns = [
     { key: 'code', label: 'الكود' },
     { key: 'name', label: 'الاسم' },
-    { key: 'category', label: 'الفئة' },
     { key: 'quantity', label: 'الكمية' },
     { key: 'wholesalePrice', label: 'سعر الجملة' },
     { key: 'sellPrice', label: 'سعر البيع' },
@@ -439,21 +521,123 @@ export default function StoreDetailsPage() {
               id: p.id,
               code: p.code || 'N/A',
               name: p.name || 'Unnamed',
-              category: p.category || 'N/A',
               quantity: p.quantity || 0,
               wholesalePrice: `$${p.wholesalePrice || 0}`,
               sellPrice: `$${p.sellPrice || 0}`,
             }))}
-            actions={['حذف']}
+            actions={['تعديل', 'حذف']}
             onAction={(action, row) => {
-              if (action === 'حذف') {
-                const product = products.find(p => p.id === row.id);
-                if (product) {
-                  handleDeleteProduct(product);
-                }
+              const product = products.find(p => p.id === row.id);
+              if (!product) return;
+              
+              if (action === 'تعديل') {
+                handleEditProduct(product);
+              } else if (action === 'حذف') {
+                handleDeleteProduct(product);
               }
             }}
           />
+
+          <Modal
+            isOpen={isEditProductModalOpen}
+            onClose={() => {
+              setIsEditProductModalOpen(false);
+              setProductToEdit(null);
+              setEditProductData({
+                quantity: '',
+                wholesalePrice: '',
+                sellPrice: '',
+                finalPrice: '',
+              });
+              setEditError('');
+            }}
+            title="تعديل المنتج"
+            footer={
+              <div className={styles.modalFooter}>
+                <Button variant="secondary" onClick={() => {
+                  setIsEditProductModalOpen(false);
+                  setProductToEdit(null);
+                  setEditProductData({
+                    quantity: '',
+                    wholesalePrice: '',
+                    sellPrice: '',
+                    finalPrice: '',
+                  });
+                  setEditError('');
+                }} disabled={updatingProduct}>
+                  إلغاء
+                </Button>
+                <Button variant="primary" onClick={confirmEditProduct} loading={updatingProduct}>
+                  حفظ التعديلات
+                </Button>
+              </div>
+            }
+          >
+            <div className={styles.editModalContent}>
+              {productToEdit && (
+                <>
+                  <div className={styles.productInfo}>
+                    <p><strong>اسم المنتج:</strong> {productToEdit.name}</p>
+                    <p><strong>كود المنتج:</strong> {productToEdit.code || 'N/A'}</p>
+                  </div>
+                  <div className={styles.editForm}>
+                    <Input
+                      label="الكمية"
+                      type="number"
+                      placeholder="أدخل الكمية"
+                      value={editProductData.quantity}
+                      onChange={(e) => {
+                        setEditProductData({ ...editProductData, quantity: e.target.value });
+                        setEditError('');
+                      }}
+                      min="0"
+                    />
+                    <Input
+                      label="سعر الجملة"
+                      type="number"
+                      placeholder="0.00"
+                      value={editProductData.wholesalePrice}
+                      onChange={(e) => {
+                        setEditProductData({ ...editProductData, wholesalePrice: e.target.value });
+                        setEditError('');
+                      }}
+                      min="0"
+                      step="0.01"
+                    />
+                    <Input
+                      label="سعر البيع"
+                      type="number"
+                      placeholder="0.00"
+                      value={editProductData.sellPrice}
+                      onChange={(e) => {
+                        setEditProductData({ ...editProductData, sellPrice: e.target.value });
+                        setEditError('');
+                      }}
+                      min="0"
+                      step="0.01"
+                    />
+                    <Input
+                      label="السعر النهائي"
+                      type="number"
+                      placeholder="0.00"
+                      value={editProductData.finalPrice}
+                      onChange={(e) => {
+                        setEditProductData({ ...editProductData, finalPrice: e.target.value });
+                        setEditError('');
+                      }}
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  {editError && (
+                    <div className={styles.editError}>
+                      {editError}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </Modal>
 
           <Modal
             isOpen={isDeleteProductModalOpen}

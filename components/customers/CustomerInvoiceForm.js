@@ -45,7 +45,6 @@ export default function CustomerInvoiceForm({
         wholesalePrice: p.wholesalePrice,
         sellPrice: p.sellPrice,
         finalPrice: p.finalPrice,
-        category: p.category,
       }));
       setProductsList(formattedProducts);
       setPaidAmount((invoice.paidAmount || 0).toString());
@@ -255,7 +254,6 @@ export default function CustomerInvoiceForm({
           finalPrice: product.finalPrice || 0,
           price: selectedPrice.toString(), // السعر المحدد من المستخدم
           quantity: quantity.toString(),
-          category: product.category || '',
           storeId: product.storeId,
         },
       ]);
@@ -316,7 +314,6 @@ export default function CustomerInvoiceForm({
         finalPrice: parseFloat(p.finalPrice),
         price: parseFloat(p.price), // السعر المحدد من المستخدم
         quantity: parseInt(p.quantity),
-        category: p.category,
         storeId: p.storeId,
       })),
       totalItems,

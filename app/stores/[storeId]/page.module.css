@@ -221,3 +221,40 @@
   font-size: 14px;
 }
 
+.editModalContent {
+  color: var(--text-primary);
+}
+
+.productInfo {
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: rgba(var(--text-secondary-rgb), 0.05);
+  border-radius: 8px;
+}
+
+.productInfo p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.productInfo strong {
+  color: var(--text-primary);
+  margin-left: 8px;
+}
+
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.editError {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 14px;
+}
+

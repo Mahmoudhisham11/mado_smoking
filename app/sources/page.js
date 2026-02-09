@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthGuard from '../../components/auth/AuthGuard';
 import MainLayout from '../../components/layout/MainLayout';
@@ -14,7 +14,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getUserFromLocalStorage } from '../../lib/auth';
 import { useToast } from '../../contexts/ToastContext';
 import SummaryCard from '../../components/dashboard/SummaryCard';
-import { HiUserGroup, HiDocumentText } from 'react-icons/hi';
+import { HiUserGroup, HiDocumentText, HiUpload } from 'react-icons/hi';
+import * as XLSX from 'xlsx';
 import styles from './page.module.css';
 
 export default function SourcesPage() {
@@ -38,6 +39,9 @@ export default function SourcesPage() {
     totalSources: 0,
     totalInvoices: 0,
   });
+  const [uploadingExcel, setUploadingExcel] = useState(false);
+  const [excelError, setExcelError] = useState('');
+  const fileInputRef = useRef(null);
   const router = useRouter();
 
   const userRole = localUserData?.role || userData?.role || 'user';
@@ -192,6 +196,146 @@ export default function SourcesPage() {
     }
   };
 
+  const handleExcelUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // التحقق من نوع الملف
+    const validTypes = [
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel.sheet.macroEnabled.12',
+    ];
+    
+    if (!validTypes.includes(file.type) && !file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      setExcelError('الملف المرفوع ليس ملف Excel صحيح');
+      showError('الملف المرفوع ليس ملف Excel صحيح');
+      return;
+    }
+
+    setUploadingExcel(true);
+    setExcelError('');
+
+    try {
+      // قراءة ملف Excel
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      
+      // الحصول على أول ورقة عمل
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      
+      // تحويل الورقة إلى JSON
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+      
+      if (!jsonData || jsonData.length === 0) {
+        throw new Error('الملف فارغ أو لا يحتوي على بيانات');
+      }
+
+      // البحث عن جميع الصفوف التي تحتوي على كلمة "السعر" في أي عمود
+      const sourceNames = [];
+      
+      for (let i = 0; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (Array.isArray(row)) {
+          // البحث عن كلمة "السعر" في أي عمود من الصف
+          const hasPrice = row.some(cell => {
+            const cellValue = String(cell).trim();
+            return cellValue === 'السعر' || cellValue.toLowerCase() === 'السعر';
+          });
+          
+          // إذا وجدنا "السعر" في هذا الصف، نأخذ القيمة من العمود B (index 1) في الصف السابق
+          if (hasPrice && i > 0) {
+            const previousRow = jsonData[i - 1];
+            if (Array.isArray(previousRow) && previousRow[1] !== undefined) {
+              const sourceName = String(previousRow[1]).trim();
+              
+              // تصفية القيم
+              if (
+                sourceName && 
+                sourceName !== '' && 
+                sourceName.toLowerCase() !== 'مصدر' &&
+                sourceName.toLowerCase() !== 'السعر' &&
+                sourceName !== 'remove' &&
+                !sourceName.toLowerCase().includes('إجمالي')
+              ) {
+                sourceNames.push(sourceName);
+              }
+            }
+          }
+        }
+      }
+
+      // إزالة المكررات
+      const uniqueSourceNames = [...new Set(sourceNames)];
+
+      if (uniqueSourceNames.length === 0) {
+        throw new Error('لم يتم العثور على أسماء مصادر في الملف');
+      }
+
+      // التحقق من المصادر الموجودة مسبقاً
+      const existingSourceNames = sources.map(s => s.sourceName.toLowerCase());
+      const newSourceNames = uniqueSourceNames.filter(name => 
+        !existingSourceNames.includes(name.toLowerCase())
+      );
+
+      if (newSourceNames.length === 0) {
+        showError('جميع المصادر الموجودة في الملف موجودة مسبقاً');
+        setUploadingExcel(false);
+        return;
+      }
+
+      // إنشاء مصادر جديدة
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const sourceName of newSourceNames) {
+        try {
+          const result = await addSource({
+            sourceName: sourceName,
+            userIds: null, // افتراضي: خاص بالمالك فقط
+          });
+          
+          if (result.success) {
+            successCount++;
+          } else {
+            failCount++;
+            console.error(`Failed to add source ${sourceName}:`, result.error);
+          }
+        } catch (error) {
+          failCount++;
+          console.error(`Error adding source ${sourceName}:`, error);
+        }
+      }
+
+      // إعادة تعيين input file
+      event.target.value = '';
+
+      // عرض النتائج
+      if (successCount > 0) {
+        showSuccess(`تم إنشاء ${successCount} مصدر بنجاح${failCount > 0 ? ` (فشل ${failCount})` : ''}`);
+        // Refresh invoices to update source counts
+        const invoices = await getInvoices();
+        setAllInvoices(invoices);
+      } else {
+        showError(`فشل في إنشاء المصادر${failCount > 0 ? ` (${failCount} فشل)` : ''}`);
+      }
+
+    } catch (error) {
+      console.error('Error processing Excel file:', error);
+      setExcelError(error.message || 'حدث خطأ أثناء معالجة الملف');
+      showError(error.message || 'حدث خطأ أثناء معالجة الملف');
+    } finally {
+      setUploadingExcel(false);
+    }
+  };
+
+  const handleExcelButtonClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   const handleAction = (action, row) => {
     if (action === 'عرض') {
       router.push(`/sources/${row.id}`);
@@ -217,12 +361,39 @@ export default function SourcesPage() {
         <div className={styles.container}>
           <PageHeader
             title="المصادر"
-            action={isOwner ? "addSource" : undefined}
-            actionLabel={isOwner ? "+ إضافة مصدر" : undefined}
-            onAction={isOwner ? () => setIsModalOpen(true) : undefined}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             showSearch={true}
+            customActions={
+              isOwner ? (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    onChange={handleExcelUpload}
+                    style={{ display: 'none' }}
+                    disabled={uploadingExcel}
+                  />
+                  <button
+                    onClick={handleExcelButtonClick}
+                    className={styles.uploadButton}
+                    disabled={uploadingExcel}
+                    title="رفع ملف Excel لإنشاء مصادر جديدة"
+                  >
+                    <HiUpload size={16} />
+                    <span>{uploadingExcel ? 'جاري الرفع...' : 'رفع Excel'}</span>
+                  </button>
+                  <button
+                    onClick={() => setIsModalOpen(true)}
+                    className={styles.actionButton}
+                    disabled={addingSource}
+                  >
+                    + إضافة مصدر
+                  </button>
+                </div>
+              ) : null
+            }
           />
 
           <div className={styles.cardsGrid}>

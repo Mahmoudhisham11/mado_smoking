@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import AuthGuard from '../../../components/auth/AuthGuard';
 import MainLayout from '../../../components/layout/MainLayout';
@@ -13,11 +13,12 @@ import Select from '../../../components/ui/Select';
 import Button from '../../../components/ui/Button';
 import { getSource, getInvoices, addInvoice, addProduct, getStores, getNextProductCode, returnInvoice, returnProduct, addPayment, getPayments, deletePayment, updatePayment, subscribeToSource, subscribeToInvoices, subscribeToCashRegisters, getUsersByOwner } from '../../../lib/firebase/firestore';
 import SummaryCard from '../../../components/dashboard/SummaryCard';
-import { HiTrash, HiDocumentText, HiCube, HiCurrencyDollar, HiPencil, HiDocumentReport } from 'react-icons/hi';
+import { HiTrash, HiDocumentText, HiCube, HiCurrencyDollar, HiPencil, HiDocumentReport, HiUpload } from 'react-icons/hi';
 import { useToast } from '../../../contexts/ToastContext';
 import styles from './page.module.css';
 import { getUserFromLocalStorage } from '../../../lib/auth';
 import { useAuth } from '../../../contexts/AuthContext';
+import * as XLSX from 'xlsx';
 
 export default function SourceDetailsPage() {
   const params = useParams();
@@ -64,20 +65,14 @@ export default function SourceDetailsPage() {
     sellPrice: '',
     finalPrice: '',
     quantity: '',
-    category: '',
     storeId: '',
   });
   const [productsList, setProductsList] = useState([]);
   const [productCode, setProductCode] = useState(1000);
+  const [uploadingExcel, setUploadingExcel] = useState(false);
+  const [excelError, setExcelError] = useState('');
+  const fileInputRef = useRef(null);
 
-  const categories = [
-    { value: 'مستورد', label: 'مستورد' },
-    { value: 'شركة', label: 'شركة' },
-    { value: 'فحم', label: 'فحم' },
-    { value: 'بفرة', label: 'بفرة' },
-    { value: 'ولاعات', label: 'ولاعات' },
-    { value: 'معسل', label: 'معسل' },
-  ];
 
   useEffect(() => {
     if (sourceId) {
@@ -139,6 +134,14 @@ export default function SourceDetailsPage() {
     }
   };
 
+  const findBasicStore = () => {
+    const basicStore = stores.find(store => 
+      store.storeName?.toLowerCase() === 'الاساسي' || 
+      store.name?.toLowerCase() === 'الاساسي'
+    );
+    return basicStore;
+  };
+
   const handleViewInvoice = (invoice) => {
     setSelectedInvoice(invoice);
     setIsViewInvoiceModalOpen(true);
@@ -183,7 +186,6 @@ export default function SourceDetailsPage() {
       sellPrice: '',
       finalPrice: '',
       quantity: '',
-      category: '',
       storeId: '',
     });
   };
@@ -199,7 +201,7 @@ export default function SourceDetailsPage() {
     try {
       // Calculate totals
       const totalItems = productsList.reduce((sum, p) => sum + (parseInt(p.quantity) || 0), 0);
-      const totalCost = productsList.reduce((sum, p) => sum + ((parseFloat(p.finalPrice) || 0) * (parseInt(p.quantity) || 0)), 0);
+      const totalCost = productsList.reduce((sum, p) => sum + ((parseFloat(p.wholesalePrice) || 0) * (parseInt(p.quantity) || 0)), 0);
       
       // Get storeId from first product (assuming all products go to same store)
       const storeId = productsList[0].storeId;
@@ -212,7 +214,6 @@ export default function SourceDetailsPage() {
         sellPrice: parseFloat(p.sellPrice) || 0,
         finalPrice: parseFloat(p.finalPrice) || 0,
         quantity: parseInt(p.quantity) || 0,
-        category: p.category,
         storeId: p.storeId,
       }));
 
@@ -262,7 +263,6 @@ export default function SourceDetailsPage() {
           sellPrice: '',
           finalPrice: '',
           quantity: '',
-          category: '',
           storeId: '',
         });
         setProductsList([]);
@@ -467,6 +467,306 @@ export default function SourceDetailsPage() {
     }
   };
 
+  const handleExcelButtonClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleExcelUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // التحقق من نوع الملف
+    const validTypes = [
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel.sheet.macroEnabled.12',
+    ];
+    
+    if (!validTypes.includes(file.type) && !file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      setExcelError('الملف المرفوع ليس ملف Excel صحيح');
+      showToast('الملف المرفوع ليس ملف Excel صحيح', 'error');
+      return;
+    }
+
+    setUploadingExcel(true);
+    setExcelError('');
+
+    try {
+      // التحقق من وجود المصدر
+      if (!source || !source.sourceName) {
+        throw new Error('المصدر غير موجود. يرجى الانتظار حتى يتم تحميل بيانات المصدر');
+      }
+
+      // التحقق من وجود المخزن الاساسي
+      const basicStore = findBasicStore();
+      if (!basicStore) {
+        throw new Error('المخزن "الاساسي" غير موجود. يرجى إنشاء المخزن أولاً');
+      }
+
+      // الحصول على اسم المصدر الحالي (مقارنة case-insensitive)
+      const currentSourceName = source.sourceName.trim().toLowerCase();
+
+      // قراءة ملف Excel
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      
+      // الحصول على أول ورقة عمل
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      
+      // تحويل الورقة إلى JSON
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+      
+      if (!jsonData || jsonData.length === 0) {
+        throw new Error('الملف فارغ أو لا يحتوي على بيانات');
+      }
+
+      // البحث عن جميع مواضع "الأصناف" في العمود A
+      const invoiceStartRows = [];
+      for (let i = 0; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (Array.isArray(row) && row[0]) {
+          const cellValue = String(row[0]).trim();
+          if (cellValue === 'الأصناف' || cellValue.toLowerCase() === 'الأصناف') {
+            invoiceStartRows.push(i);
+          }
+        }
+      }
+
+      if (invoiceStartRows.length === 0) {
+        throw new Error('لم يتم العثور على كلمة "الأصناف" في الملف');
+      }
+
+      let totalInvoicesCreated = 0;
+      let totalInvoicesFailed = 0;
+      let totalInvoicesSkipped = 0;
+
+      // معالجة كل فاتورة
+      for (let invoiceIndex = 0; invoiceIndex < invoiceStartRows.length; invoiceIndex++) {
+        const startRow = invoiceStartRows[invoiceIndex];
+        const endRow = invoiceIndex < invoiceStartRows.length - 1 
+          ? invoiceStartRows[invoiceIndex + 1] 
+          : jsonData.length;
+
+        try {
+          // البحث عن موضع "السعر" في العمود B للتحقق من اسم المصدر
+          let priceStartRow = -1;
+          for (let i = startRow; i < endRow; i++) {
+            const row = jsonData[i];
+            if (Array.isArray(row) && row[1]) {
+              const cellValue = String(row[1]).trim();
+              if (cellValue === 'السعر' || cellValue.toLowerCase() === 'السعر') {
+                priceStartRow = i;
+                break;
+              }
+            }
+          }
+
+          // التحقق من اسم المصدر في العمود B فوق "السعر"
+          if (priceStartRow === -1 || priceStartRow === 0) {
+            console.warn(`فاتورة ${invoiceIndex + 1}: لم يتم العثور على "السعر" أو لا يوجد صف سابق`);
+            totalInvoicesSkipped++;
+            continue;
+          }
+
+          const sourceNameRow = jsonData[priceStartRow - 1];
+          if (!Array.isArray(sourceNameRow) || !sourceNameRow[1]) {
+            console.warn(`فاتورة ${invoiceIndex + 1}: لا يوجد اسم مصدر في العمود B فوق "السعر"`);
+            totalInvoicesSkipped++;
+            continue;
+          }
+
+          const invoiceSourceName = String(sourceNameRow[1]).trim().toLowerCase();
+          
+          // التحقق من تطابق اسم المصدر
+          if (invoiceSourceName !== currentSourceName) {
+            console.log(`فاتورة ${invoiceIndex + 1}: تم تجاهلها - اسم المصدر في الملف (${sourceNameRow[1]}) لا يطابق المصدر الحالي (${source.sourceName})`);
+            totalInvoicesSkipped++;
+            continue;
+          }
+
+          // استخراج أسماء المنتجات من العمود A بين "الأصناف" و "remove"
+          const products = [];
+          for (let i = startRow + 1; i < endRow; i++) {
+            const row = jsonData[i];
+            if (Array.isArray(row) && row[0]) {
+              const cellValue = String(row[0]).trim();
+              if (cellValue.toLowerCase() === 'remove' || cellValue === 'remove') {
+                break;
+              }
+              if (cellValue && cellValue !== 'الأصناف') {
+                products.push(cellValue);
+              }
+            }
+          }
+
+          // استخراج الأسعار من العمود B تحت "السعر" حتى "remove" أو حتى تختفي الأرقام
+          // (priceStartRow تم العثور عليه بالفعل في التحقق من اسم المصدر)
+          const prices = [];
+          if (priceStartRow !== -1) {
+            for (let i = priceStartRow + 1; i < endRow; i++) {
+              const row = jsonData[i];
+              if (Array.isArray(row) && row[1] !== undefined) {
+                const cellValue = String(row[1]).trim();
+                if (cellValue.toLowerCase() === 'remove' || cellValue === 'remove') {
+                  break;
+                }
+                // التحقق من أن القيمة رقم
+                const numValue = parseFloat(cellValue);
+                if (!isNaN(numValue) && cellValue !== '') {
+                  prices.push(numValue);
+                } else if (cellValue !== '' && isNaN(numValue)) {
+                  // إذا ظهر نص بدلاً من رقم، توقف عن الاستخراج
+                  break;
+                }
+              }
+            }
+          }
+
+          // البحث عن موضع "العدد" في العمود E
+          let quantityStartRow = -1;
+          for (let i = startRow; i < endRow; i++) {
+            const row = jsonData[i];
+            if (Array.isArray(row) && row[4]) {
+              const cellValue = String(row[4]).trim();
+              if (cellValue === 'العدد' || cellValue.toLowerCase() === 'العدد') {
+                quantityStartRow = i;
+                break;
+              }
+            }
+          }
+
+          // استخراج الكميات من العمود E تحت "العدد" حتى "####"
+          const quantities = [];
+          if (quantityStartRow !== -1) {
+            for (let i = quantityStartRow + 1; i < endRow; i++) {
+              const row = jsonData[i];
+              if (Array.isArray(row) && row[4] !== undefined) {
+                const cellValue = String(row[4]).trim();
+                if (cellValue === '####' || cellValue.includes('####')) {
+                  break;
+                }
+                const numValue = parseInt(cellValue);
+                if (!isNaN(numValue) && cellValue !== '') {
+                  quantities.push(numValue);
+                }
+              }
+            }
+          }
+
+          // التحقق من تطابق الأعداد
+          const minLength = Math.min(products.length, prices.length, quantities.length);
+          if (minLength === 0) {
+            console.warn(`فاتورة ${invoiceIndex + 1}: لا توجد منتجات صالحة`);
+            totalInvoicesFailed++;
+            continue;
+          }
+
+          if (products.length !== prices.length || products.length !== quantities.length) {
+            console.warn(`فاتورة ${invoiceIndex + 1}: عدد المنتجات (${products.length}) لا يطابق عدد الأسعار (${prices.length}) أو الكميات (${quantities.length})`);
+          }
+
+          // ربط المنتجات بأسعارها وكمياتها (بنفس الترتيب)
+          const invoiceProducts = [];
+          for (let i = 0; i < minLength; i++) {
+            const productName = products[i];
+            const wholesalePrice = prices[i] || 0;
+            const quantity = quantities[i] || 0;
+
+            if (productName && quantity > 0) {
+              // الحصول على كود منتج جديد
+              const nextCode = await getNextProductCode();
+              
+              invoiceProducts.push({
+                code: nextCode,
+                name: productName,
+                wholesalePrice: wholesalePrice,
+                sellPrice: wholesalePrice, // استخدام نفس سعر الجملة كسعر بيع افتراضي
+                finalPrice: wholesalePrice, // استخدام نفس سعر الجملة كسعر نهائي افتراضي
+                quantity: quantity,
+                storeId: basicStore.id,
+              });
+            }
+          }
+
+          if (invoiceProducts.length === 0) {
+            console.warn(`فاتورة ${invoiceIndex + 1}: لا توجد منتجات صالحة`);
+            totalInvoicesFailed++;
+            continue;
+          }
+
+          // حساب الإجمالي
+          const totalItems = invoiceProducts.reduce((sum, p) => sum + p.quantity, 0);
+          const totalCost = invoiceProducts.reduce((sum, p) => sum + (p.wholesalePrice * p.quantity), 0);
+
+          // إنشاء فاتورة
+          const invoiceData = {
+            sourceId,
+            date: new Date(),
+            products: invoiceProducts,
+            totalItems,
+            totalCost,
+            paidAmount: 0,
+            remainingAmount: totalCost,
+            overpaid: false,
+            storeId: basicStore.id,
+          };
+
+          const invoiceResult = await addInvoice(invoiceData);
+          
+          if (invoiceResult.success) {
+            // إضافة جميع المنتجات إلى المخزن
+            for (const product of invoiceProducts) {
+              await addProduct(product);
+            }
+            totalInvoicesCreated++;
+          } else {
+            console.error(`فاتورة ${invoiceIndex + 1}: فشل في الإنشاء`, invoiceResult.error);
+            totalInvoicesFailed++;
+          }
+
+        } catch (error) {
+          console.error(`فاتورة ${invoiceIndex + 1}: خطأ في المعالجة`, error);
+          totalInvoicesFailed++;
+        }
+      }
+
+      // إعادة تعيين input file
+      event.target.value = '';
+
+      // عرض النتائج
+      let message = '';
+      if (totalInvoicesCreated > 0) {
+        message = `تم إنشاء ${totalInvoicesCreated} فاتورة بنجاح`;
+        if (totalInvoicesFailed > 0) {
+          message += ` (فشل ${totalInvoicesFailed})`;
+        }
+        if (totalInvoicesSkipped > 0) {
+          message += ` (تم تجاهل ${totalInvoicesSkipped} فاتورة لا تنتمي للمصدر)`;
+        }
+        showToast(message, 'success');
+      } else {
+        message = `فشل في إنشاء الفواتير`;
+        if (totalInvoicesFailed > 0) {
+          message += ` (${totalInvoicesFailed} فشل)`;
+        }
+        if (totalInvoicesSkipped > 0) {
+          message += ` (تم تجاهل ${totalInvoicesSkipped} فاتورة لا تنتمي للمصدر)`;
+        }
+        showToast(message, 'error');
+      }
+
+    } catch (error) {
+      console.error('Error processing Excel file:', error);
+      setExcelError(error.message || 'حدث خطأ أثناء معالجة الملف');
+      showToast(error.message || 'حدث خطأ أثناء معالجة الملف', 'error');
+    } finally {
+      setUploadingExcel(false);
+    }
+  };
+
   const columns = [
     { key: 'date', label: 'التاريخ' },
     { key: 'totalItems', label: 'إجمالي العناصر' },
@@ -522,6 +822,23 @@ export default function SourceDetailsPage() {
               <div className={styles.headerActions}>
                 {isOwner && (
                   <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                      onChange={handleExcelUpload}
+                      style={{ display: 'none' }}
+                      disabled={uploadingExcel}
+                    />
+                    <button
+                      className={styles.headerActionButton}
+                      onClick={handleExcelButtonClick}
+                      disabled={uploadingExcel}
+                      title="رفع ملف Excel لإنشاء فواتير"
+                    >
+                      <HiUpload size={16} />
+                      <span>{uploadingExcel ? 'جاري الرفع...' : 'رفع Excel'}</span>
+                    </button>
                     <button
                       className={styles.headerActionButton}
                       onClick={handleAddPayment}
@@ -618,7 +935,6 @@ export default function SourceDetailsPage() {
                 sellPrice: '',
                 finalPrice: '',
                 quantity: '',
-                category: '',
                 storeId: '',
               });
               setPaymentAmount('');
@@ -684,15 +1000,6 @@ export default function SourceDetailsPage() {
                   }
                 />
                 <Select
-                  label="الفئة"
-                  placeholder="اختر الفئة"
-                  value={currentProduct.category}
-                  onChange={(e) =>
-                    setCurrentProduct({ ...currentProduct, category: e.target.value })
-                  }
-                  options={categories}
-                />
-                <Select
                   label="المتجر"
                   placeholder="اختر المتجر"
                   value={currentProduct.storeId}
@@ -721,9 +1028,8 @@ export default function SourceDetailsPage() {
                       <thead>
                         <tr>
                           <th>اسم المنتج</th>
-                          <th>الفئة</th>
                           <th>الكمية</th>
-                          <th>السعر النهائي</th>
+                          <th>سعر الجملة</th>
                           <th>الإجمالي</th>
                           <th>إجراءات</th>
                         </tr>
@@ -732,10 +1038,9 @@ export default function SourceDetailsPage() {
                         {productsList.map((product, index) => (
                           <tr key={index}>
                             <td>{product.productName}</td>
-                            <td>{product.category || '-'}</td>
                             <td>{product.quantity}</td>
-                            <td>${parseFloat(product.finalPrice) || 0}</td>
-                            <td>${(parseFloat(product.finalPrice) || 0) * (parseInt(product.quantity) || 0)}</td>
+                            <td>${parseFloat(product.wholesalePrice) || 0}</td>
+                            <td>${(parseFloat(product.wholesalePrice) || 0) * (parseInt(product.quantity) || 0)}</td>
                             <td>
                               <button
                                 className={styles.deleteButton}
@@ -756,7 +1061,7 @@ export default function SourceDetailsPage() {
                       <Input
                         label="إجمالي الفاتورة"
                         type="text"
-                        value={`$${productsList.reduce((sum, p) => sum + ((parseFloat(p.finalPrice) || 0) * (parseInt(p.quantity) || 0)), 0).toLocaleString()}`}
+                        value={`$${productsList.reduce((sum, p) => sum + ((parseFloat(p.wholesalePrice) || 0) * (parseInt(p.quantity) || 0)), 0).toLocaleString()}`}
                         disabled
                       />
                       <Input
@@ -792,7 +1097,7 @@ export default function SourceDetailsPage() {
                       <Input
                         label="المتبقي"
                         type="text"
-                        value={`$${(productsList.reduce((sum, p) => sum + ((parseFloat(p.finalPrice) || 0) * (parseInt(p.quantity) || 0)), 0) - (parseFloat(paymentAmount) || 0)).toLocaleString()}`}
+                        value={`$${(productsList.reduce((sum, p) => sum + ((parseFloat(p.wholesalePrice) || 0) * (parseInt(p.quantity) || 0)), 0) - (parseFloat(paymentAmount) || 0)).toLocaleString()}`}
                         disabled
                       />
                     </div>
@@ -893,7 +1198,6 @@ export default function SourceDetailsPage() {
                       <tr>
                         <th>كود المنتج</th>
                         <th>اسم المنتج</th>
-                        <th>الفئة</th>
                         <th>الكمية</th>
                         <th>سعر الجملة</th>
                         <th>سعر البيع</th>
@@ -908,12 +1212,11 @@ export default function SourceDetailsPage() {
                           <tr key={index}>
                             <td>{product.code || '-'}</td>
                             <td>{product.name || '-'}</td>
-                            <td>{product.category || '-'}</td>
                             <td>{product.quantity || 0}</td>
                             <td>${product.wholesalePrice || 0}</td>
                             <td>${product.sellPrice || 0}</td>
                             <td>${product.finalPrice || 0}</td>
-                            <td>${(product.finalPrice || 0) * (product.quantity || 0)}</td>
+                            <td>${(product.wholesalePrice || 0) * (product.quantity || 0)}</td>
                             {!selectedInvoice.returned && (
                               <td>
                                 <button
@@ -929,7 +1232,7 @@ export default function SourceDetailsPage() {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={selectedInvoice.returned ? "8" : "9"} style={{ textAlign: 'center', padding: '20px' }}>
+                          <td colSpan={selectedInvoice.returned ? "7" : "8"} style={{ textAlign: 'center', padding: '20px' }}>
                             لا توجد منتجات
                           </td>
                         </tr>
