@@ -1,0 +1,325 @@
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--card-color);
+  border-top: 1px solid rgba(var(--text-secondary-rgb), 0.2);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 16px 12px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: var(--z-bottom-nav);
+  gap: 12px;
+}
+
+.navItem {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 28px;
+  transition: all 0.25s ease;
+  position: relative;
+  background-color: #141414;
+  min-width: 48px;
+  height: 48px;
+  justify-content: center;
+  user-select: none;
+}
+
+:root[data-theme="dark"] .navItem,
+:root:not([data-theme]) .navItem {
+  background-color: #141414;
+}
+
+:root[data-theme="light"] .navItem {
+  background-color: #e5e5e5;
+}
+
+.navItem:hover {
+  transform: scale(1.02);
+}
+
+.navItem:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.navItemActive {
+  background-color: var(--primary-color);
+  padding: 0 4px;
+  min-width: auto;
+}
+
+:root[data-theme="dark"] .navItemActive,
+:root:not([data-theme]) .navItemActive {
+  background-color: var(--primary-color);
+}
+
+:root[data-theme="light"] .navItemActive {
+  background-color: var(--primary-color);
+}
+
+.navItemClicked {
+  transform: scale(0.95);
+  animation: clickAnimation 0.3s ease;
+}
+
+@keyframes clickAnimation {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.iconWrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.iconWrapperActive {
+  background-color: var(--primary-color);
+}
+
+.icon {
+  font-size: 20px;
+  transition: all 0.25s ease;
+}
+
+:root[data-theme="dark"] .icon,
+:root:not([data-theme]) .icon {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .icon {
+  color: var(--text-secondary);
+}
+
+.iconWrapperActive .icon {
+  color: var(--background-color);
+}
+
+.label {
+  display: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--background-color);
+  padding: 0 16px;
+  white-space: nowrap;
+  transition: all 0.25s ease;
+  opacity: 0;
+  transform: translateX(-8px);
+  animation: labelFadeIn 0.25s ease forwards;
+}
+
+@keyframes labelFadeIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.navItemActive .label {
+  display: block;
+}
+
+/* ── Plus button ── */
+.plusContainer {
+  position: relative;
+}
+
+.plusButton {
+  transition: all 0.25s ease;
+}
+
+.plusActive {
+  background-color: var(--primary-color);
+}
+
+:root[data-theme="dark"] .plusActive,
+:root:not([data-theme]) .plusActive {
+  background-color: var(--primary-color);
+}
+
+:root[data-theme="light"] .plusActive {
+  background-color: var(--primary-color);
+}
+
+.plusIcon {
+  transition: transform 0.3s ease;
+}
+
+.plusIconRotated {
+  transform: rotate(45deg);
+  color: var(--background-color);
+}
+
+.plusActive .iconWrapper {
+  background-color: var(--primary-color);
+}
+
+.plusActive .icon {
+  color: var(--background-color);
+}
+
+/* ── Overlay ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: calc(var(--z-modal));
+  animation: overlayFadeIn 0.2s ease;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Popup menu ── */
+.menu {
+  position: fixed;
+  bottom: calc(48px + 16px + 16px + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--card-color);
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.15);
+  border-radius: 16px;
+  padding: 8px;
+  min-width: 200px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  animation: menuSlideUp 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: calc(var(--z-modal) + 1);
+}
+
+@keyframes menuSlideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(16px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  animation: menuItemFadeIn 0.25s ease both;
+}
+
+@keyframes menuItemFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.menuItem:hover {
+  background-color: rgba(var(--text-secondary-rgb), 0.08);
+}
+
+.menuItem:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+}
+
+.menuItemActive {
+  background-color: rgba(var(--primary-rgb), 0.12);
+}
+
+:root[data-theme="dark"] .menuItemActive,
+:root:not([data-theme]) .menuItemActive {
+  background-color: rgba(255, 152, 0, 0.12);
+}
+
+.menuItemIcon {
+  font-size: 20px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.menuItemActive .menuItemIcon {
+  color: var(--primary-color);
+}
+
+.menuItemLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.menuItemActive .menuItemLabel {
+  color: var(--primary-color);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .nav {
+    padding: 12px 8px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+
+  .navItem {
+    min-width: 44px;
+    height: 44px;
+    border-radius: 22px;
+  }
+
+  .iconWrapper {
+    width: 32px;
+    height: 32px;
+  }
+
+  .icon {
+    font-size: 18px;
+  }
+
+  .label {
+    font-size: 13px;
+    padding: 0 12px;
+  }
+
+  .menu {
+    min-width: 180px;
+    padding: 6px;
+    bottom: calc(44px + 12px + 12px + 8px);
+  }
+
+  .menuItem {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  .menuItemIcon {
+    font-size: 18px;
+  }
+
+  .menuItemLabel {
+    font-size: 13px;
+  }
+}
