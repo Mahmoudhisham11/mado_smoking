@@ -556,7 +556,7 @@ export default function CustomerDetailPage() {
     { key: 'date', label: 'التاريخ' },
     { key: 'items', label: 'عدد الأصناف' },
     { key: 'total', label: 'الإجمالي' },
-    { key: 'profit', label: 'الربح' },
+    ...(isOwner ? [{ key: 'profit', label: 'الربح' }] : []),
     { key: 'actions', label: '' },
   ];
 
@@ -576,7 +576,7 @@ export default function CustomerDetailPage() {
     date: formatDate(inv.date),
     items: inv.totalItems || 0,
     total: `${formatPrice(inv.totalCost)} ج.م`,
-    profit: `${formatPrice(calcInvoiceProfit(inv.products))} ج.م`,
+    ...(isOwner ? { profit: `${formatPrice(calcInvoiceProfit(inv.products))} ج.م` } : {}),
     actions: (
       <button className={styles.viewBtn} onClick={(e) => { e.stopPropagation(); openInvoiceDetail(inv); }} title="عرض الفاتورة">
         <HiEye size={16} />
@@ -780,7 +780,7 @@ export default function CustomerDetailPage() {
             </button>
             <div className={styles.invoiceTotal}>
               <div>الإجمالي: {formatPrice(invoiceTotal)} ج.م</div>
-              <div>الربح: {formatPrice(invoiceProfit)} ج.م</div>
+              {isOwner && <div>الربح: {formatPrice(invoiceProfit)} ج.م</div>}
             </div>
             <hr className={styles.separator} />
             <div>
@@ -881,7 +881,7 @@ export default function CustomerDetailPage() {
               ))}
               <div className={styles.invoiceTotal}>
                 <div>الإجمالي: {formatPrice(selectedInvoice.totalCost)} ج.م</div>
-                <div>الربح: {formatPrice(calcInvoiceProfit(selectedInvoice.products))} ج.م</div>
+                {isOwner && <div>الربح: {formatPrice(calcInvoiceProfit(selectedInvoice.products))} ج.م</div>}
               </div>
             </div>
           )}
@@ -940,7 +940,7 @@ export default function CustomerDetailPage() {
               <button className={styles.addLineBtn} onClick={addEditLine}><HiPlus size={16} /> إضافة صنف آخر</button>
               <div className={styles.invoiceTotal}>
                 <div>الإجمالي: {formatPrice(editInvoiceTotal)} ج.م</div>
-                <div>الربح: {formatPrice(editInvoiceProfit)} ج.م</div>
+                {isOwner && <div>الربح: {formatPrice(editInvoiceProfit)} ج.م</div>}
               </div>
             </div>
           )}

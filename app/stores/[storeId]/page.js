@@ -10,6 +10,7 @@ import Table from '../../../components/ui/Table';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import { getStore, subscribeToStoreProducts, subscribeToProducts, updateStoreProductQuantity, subscribeAllSourceInvoices } from '../../../lib/firebase/firestore';
+import { getUserFromLocalStorage } from '../../../lib/auth';
 import { HiOfficeBuilding, HiCube, HiDatabase, HiArrowRight, HiUpload, HiCurrencyDollar } from 'react-icons/hi';
 import * as XLSX from 'xlsx';
 import styles from './page.module.css';
@@ -29,6 +30,9 @@ export default function StoreDetailPage() {
   const [excelLoading, setExcelLoading] = useState(false);
   const [excelError, setExcelError] = useState('');
   const fileInputRef = useRef(null);
+
+  const userData = getUserFromLocalStorage();
+  const isOwner = (userData?.role || 'user') === 'owner';
 
   useEffect(() => {
     const loadStore = async () => {
@@ -207,11 +211,13 @@ export default function StoreDetailPage() {
                   value={totalQuantity}
                   icon={HiDatabase}
                 />
-                <SummaryCard
-                  title="إجمالي سعر الاصناف"
-                  value={`${formatPrice(totalStockValue)} ج.م`}
-                  icon={HiCurrencyDollar}
-                />
+                {isOwner && (
+                  <SummaryCard
+                    title="إجمالي سعر الاصناف"
+                    value={`${formatPrice(totalStockValue)} ج.م`}
+                    icon={HiCurrencyDollar}
+                  />
+                )}
               </div>
 
               {products.length === 0 ? (

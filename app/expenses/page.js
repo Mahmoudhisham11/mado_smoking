@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AuthGuard from '../../components/auth/AuthGuard';
 import MainLayout from '../../components/layout/MainLayout';
 import PageHeader from '../../components/layout/PageHeader';
@@ -15,6 +16,7 @@ import { HiCash, HiClipboardList, HiPencil, HiTrash } from 'react-icons/hi';
 import styles from './page.module.css';
 
 export default function ExpensesPage() {
+  const router = useRouter();
   const [expenses, setExpenses] = useState([]);
   const [custodies, setCustodies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +50,22 @@ export default function ExpensesPage() {
   const userData = getUserFromLocalStorage();
   const userRole = userData?.role || 'user';
   const isOwner = userRole === 'owner';
+
+  if (!isOwner) {
+    return (
+      <AuthGuard>
+        <MainLayout>
+          <div className={styles.container}>
+            <Modal isOpen={true} onClose={() => router.push('/')} title="تنبيه" size="small" footer={
+              <Button variant="primary" onClick={() => router.push('/')}>العودة للرئيسية</Button>
+            }>
+              <p style={{ textAlign: 'center', padding: '16px 0' }}>ليس لديك الصلاحية للوصول الى هذه البيانات</p>
+            </Modal>
+          </div>
+        </MainLayout>
+      </AuthGuard>
+    );
+  }
 
   useEffect(() => {
     const unsub = subscribeToExpenses((data) => {

@@ -69,6 +69,22 @@ export default function SourceDetailPage() {
   const userRole = userData?.role || 'user';
   const isOwner = userRole === 'owner';
 
+  if (!isOwner) {
+    return (
+      <AuthGuard>
+        <MainLayout>
+          <div className={styles.container}>
+            <Modal isOpen={true} onClose={() => router.push('/')} title="تنبيه" size="small" footer={
+              <Button variant="primary" onClick={() => router.push('/')}>العودة للرئيسية</Button>
+            }>
+              <p style={{ textAlign: 'center', padding: '16px 0' }}>ليس لديك الصلاحية للوصول الى هذه البيانات</p>
+            </Modal>
+          </div>
+        </MainLayout>
+      </AuthGuard>
+    );
+  }
+
   // Selection
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState([]);
   const [isDeletingSelected, setIsDeletingSelected] = useState(false);
