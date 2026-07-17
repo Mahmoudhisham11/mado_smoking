@@ -53,7 +53,7 @@ export default function StoresPage() {
   const [transferTo, setTransferTo] = useState("");
   const [storeProducts, setStoreProducts] = useState([]);
   const [transferLines, setTransferLines] = useState([
-    { productId: "", productName: "", quantity: "" },
+    { productId: "", productName: "", productSearchText: "", quantity: "" },
   ]);
   const [transferError, setTransferError] = useState("");
   const [transferring, setTransferring] = useState(false);
@@ -213,7 +213,7 @@ export default function StoresPage() {
     setEditingTransferId(null);
     setTransferFrom(stores[0].id);
     setTransferTo(stores[1].id);
-    setTransferLines([{ productId: "", productName: "", quantity: "" }]);
+    setTransferLines([{ productId: "", productName: "", productSearchText: "", quantity: "" }]);
     setTransferError("");
     setIsTransferModalOpen(true);
   };
@@ -227,7 +227,7 @@ export default function StoresPage() {
   const addTransferLine = () => {
     setTransferLines((prev) => [
       ...prev,
-      { productId: "", productName: "", quantity: "" },
+      { productId: "", productName: "", productSearchText: "", quantity: "" },
     ]);
   };
 
@@ -238,11 +238,14 @@ export default function StoresPage() {
   const updateTransferLine = (index, field, value) => {
     setTransferLines((prev) => {
       const updated = [...prev];
-      if (field === "productId") {
-        const sp = storeProducts.find((p) => p.productId === value);
+      if (field === "productSearchText") {
+        const productsInStore = getProductsInStore(transferFrom);
+        const matched = productsInStore.find((sp) => sp.productName === value);
         updated[index] = {
-          productId: value,
-          productName: sp?.productName || "",
+          ...updated[index],
+          productSearchText: value,
+          productId: matched ? matched.productId : "",
+          productName: matched ? matched.productName : "",
           quantity: "",
         };
       } else {
@@ -331,6 +334,7 @@ export default function StoresPage() {
       transfer.products.map((p) => ({
         productId: p.productId,
         productName: p.productName,
+        productSearchText: p.productName,
         quantity: String(p.quantity),
       })),
     );
@@ -571,7 +575,7 @@ export default function StoresPage() {
                   onChange={(e) => {
                     setTransferFrom(e.target.value);
                     setTransferLines([
-                      { productId: "", productName: "", quantity: "" },
+                      { productId: "", productName: "", productSearchText: "", quantity: "" },
                     ]);
                   }}
                 >
@@ -604,20 +608,23 @@ export default function StoresPage() {
               <div key={index} className={styles.transferLine}>
                 <div style={{ flex: 1 }}>
                   <label className={styles.formLabel}>الصنف</label>
-                  <select
-                    className={styles.formSelect}
-                    value={line.productId}
+                  <input
+                    type="text"
+                    className={styles.formInput}
+                    placeholder="ابحث عن صنف..."
+                    value={line.productSearchText || ""}
                     onChange={(e) =>
-                      updateTransferLine(index, "productId", e.target.value)
+                      updateTransferLine(index, "productSearchText", e.target.value)
                     }
-                  >
-                    <option value="">اختر صنف</option>
+                    list={`transfer-products-${index}`}
+                  />
+                  <datalist id={`transfer-products-${index}`}>
                     {getProductsInStore(transferFrom).map((sp) => (
-                      <option key={sp.id} value={sp.productId}>
+                      <option key={sp.id} value={sp.productName}>
                         {sp.productName} (المتوفر: {sp.totalQuantity})
                       </option>
                     ))}
-                  </select>
+                  </datalist>
                 </div>
                 <div style={{ width: "120px" }}>
                   <label className={styles.formLabel}>الكمية</label>

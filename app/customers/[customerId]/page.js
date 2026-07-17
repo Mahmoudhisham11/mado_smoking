@@ -9,7 +9,7 @@ import Card from '../../../components/ui/Card';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Table from '../../../components/ui/Table';
-import { getCustomer, subscribeToCustomerInvoices, addCustomerInvoice, updateCustomerInvoice, deleteCustomerInvoice, subscribeToCustomerPayments, addCustomerPayment, deleteCustomerPayment, subscribeToProducts, subscribeToStores, subscribeToAllStoreProducts, updateStoreProductQuantity, subscribeToCustodies } from '../../../lib/firebase/firestore';
+import { getCustomer, subscribeToCustomerInvoices, addCustomerInvoice, updateCustomerInvoice, deleteCustomerInvoice, subscribeToCustomerPayments, addCustomerPayment, deleteCustomerPayment, subscribeToProducts, subscribeToStores, subscribeToAllStoreProducts, updateStoreProductQuantity, subscribeToCustodies, subscribeAllSourceInvoices } from '../../../lib/firebase/firestore';
 import { getUserFromLocalStorage } from '../../../lib/auth';
 import { HiUser, HiCurrencyDollar, HiCash, HiDocumentReport, HiArrowRight, HiPlus, HiTrash, HiX, HiPencil, HiEye, HiDotsVertical, HiClipboardList } from 'react-icons/hi';
 import styles from './page.module.css';
@@ -48,6 +48,9 @@ export default function CustomerDetailPage() {
   // Custody selector
   const [custodies, setCustodies] = useState([]);
   const [paymentCustodyId, setPaymentCustodyId] = useState('');
+
+  // Source invoices for wholesale price
+  const [sourceInvoices, setSourceInvoices] = useState([]);
 
   const userData = getUserFromLocalStorage();
   const userRole = userData?.role || 'user';
@@ -108,6 +111,9 @@ export default function CustomerDetailPage() {
     const unsubCustodies = subscribeToCustodies((data) => {
       setCustodies(data);
     });
+    const unsubSourceInvoices = subscribeAllSourceInvoices((data) => {
+      setSourceInvoices(data);
+    });
     return () => {
       unsubInvoices();
       unsubPayments();
@@ -115,6 +121,7 @@ export default function CustomerDetailPage() {
       unsubStores();
       unsubStoreProducts();
       unsubCustodies();
+      unsubSourceInvoices();
     };
   }, [customerId]);
 
@@ -161,6 +168,25 @@ export default function CustomerDetailPage() {
   const totalPaid = filteredPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const remaining = totalCost - totalPaid;
 
+  // Wholesale price map (last price per product)
+  const lastWholesalePriceMap = {};
+  for (const invoice of sourceInvoices) {
+    for (const line of (invoice.products || [])) {
+      if (!lastWholesalePriceMap[line.productId]) {
+        lastWholesalePriceMap[line.productId] = Number(line.wholesalePrice) || 0;
+      }
+    }
+  }
+
+  // Calculate profit for an invoice (used for table + detail)
+  const calcInvoiceProfit = (products) => {
+    return (products || []).reduce((sum, line) => {
+      const wholesale = lastWholesalePriceMap[line.productId] || 0;
+      const profit = ((Number(line.sellingPrice) || 0) - wholesale) * (Number(line.quantity) || 0);
+      return sum + profit;
+    }, 0);
+  };
+
   // Invoice helpers
   const openInvoiceModal = () => {
     setInvoiceLines([{ storeId: '', productId: '', productSearchText: '', sellingPrice: '', quantity: '' }]);
@@ -202,6 +228,11 @@ export default function CustomerDetailPage() {
     return sum + ((Number(line.sellingPrice) || 0) * (Number(line.quantity) || 0));
   }, 0);
 
+  const invoiceProfit = invoiceLines.reduce((sum, line) => {
+    const wholesale = lastWholesalePriceMap[line.productId] || 0;
+    return sum + (((Number(line.sellingPrice) || 0) - wholesale) * (Number(line.quantity) || 0));
+  }, 0);
+
   const handleSaveInvoice = async () => {
     for (let i = 0; i < invoiceLines.length; i++) {
       const line = invoiceLines[i];
@@ -227,8 +258,8 @@ export default function CustomerDetailPage() {
     // Validate paid amount against credit limit
     const creditLimit = Number(customer?.creditLimit) || 0;
     const paidAmount = Number(invoicePaidAmount) || 0;
-    if (creditLimit > 0 && paidAmount < creditLimit) {
-      setCreditLimitError(`المبلغ المدفوع (${paidAmount.toLocaleString()}) أقل من حد الائتمان للعميل (${creditLimit.toLocaleString()})`);
+    if (invoiceTotal > creditLimit && paidAmount < creditLimit) {
+      setCreditLimitError(`إجمالي الفاتورة (${formatPrice(invoiceTotal)}) يتجاوز حد الائتمان (${formatPrice(creditLimit)}) والمبلغ المدفوع (${formatPrice(paidAmount)}) أقل من الحد المطلوب`);
       return;
     }
 
@@ -271,12 +302,12 @@ export default function CustomerDetailPage() {
       }
 
       // Create payment for the paid amount if > 0
-      if (paidAmount > 0 && invoicePaymentCustodyId) {
+      if (paidAmount > 0) {
         await addCustomerPayment({
           customerId,
           amount: paidAmount,
           date: new Date(),
-          custodyId: invoicePaymentCustodyId,
+          custodyId: invoicePaymentCustodyId || undefined,
           invoiceId: result.id,
         });
       }
@@ -391,6 +422,11 @@ export default function CustomerDetailPage() {
 
   const editInvoiceTotal = editInvoiceLines.reduce((sum, line) => {
     return sum + ((Number(line.sellingPrice) || 0) * (Number(line.quantity) || 0));
+  }, 0);
+
+  const editInvoiceProfit = editInvoiceLines.reduce((sum, line) => {
+    const wholesale = lastWholesalePriceMap[line.productId] || 0;
+    return sum + (((Number(line.sellingPrice) || 0) - wholesale) * (Number(line.quantity) || 0));
   }, 0);
 
   const handleSaveEditedInvoice = async () => {
@@ -520,6 +556,7 @@ export default function CustomerDetailPage() {
     { key: 'date', label: 'التاريخ' },
     { key: 'items', label: 'عدد الأصناف' },
     { key: 'total', label: 'الإجمالي' },
+    { key: 'profit', label: 'الربح' },
     { key: 'actions', label: '' },
   ];
 
@@ -539,6 +576,7 @@ export default function CustomerDetailPage() {
     date: formatDate(inv.date),
     items: inv.totalItems || 0,
     total: `${formatPrice(inv.totalCost)} ج.م`,
+    profit: `${formatPrice(calcInvoiceProfit(inv.products))} ج.م`,
     actions: (
       <button className={styles.viewBtn} onClick={(e) => { e.stopPropagation(); openInvoiceDetail(inv); }} title="عرض الفاتورة">
         <HiEye size={16} />
@@ -741,7 +779,8 @@ export default function CustomerDetailPage() {
               <HiPlus size={16} /> إضافة صنف آخر
             </button>
             <div className={styles.invoiceTotal}>
-              الإجمالي: {formatPrice(invoiceTotal)} ج.م
+              <div>الإجمالي: {formatPrice(invoiceTotal)} ج.م</div>
+              <div>الربح: {formatPrice(invoiceProfit)} ج.م</div>
             </div>
             <hr className={styles.separator} />
             <div>
@@ -840,7 +879,10 @@ export default function CustomerDetailPage() {
                   </span>
                 </div>
               ))}
-              <div className={styles.invoiceTotal}>الإجمالي: {formatPrice(selectedInvoice.totalCost)} ج.م</div>
+              <div className={styles.invoiceTotal}>
+                <div>الإجمالي: {formatPrice(selectedInvoice.totalCost)} ج.م</div>
+                <div>الربح: {formatPrice(calcInvoiceProfit(selectedInvoice.products))} ج.م</div>
+              </div>
             </div>
           )}
 
@@ -896,7 +938,10 @@ export default function CustomerDetailPage() {
                 </div>
               ))}
               <button className={styles.addLineBtn} onClick={addEditLine}><HiPlus size={16} /> إضافة صنف آخر</button>
-              <div className={styles.invoiceTotal}>الإجمالي: {formatPrice(editInvoiceTotal)} ج.م</div>
+              <div className={styles.invoiceTotal}>
+                <div>الإجمالي: {formatPrice(editInvoiceTotal)} ج.م</div>
+                <div>الربح: {formatPrice(editInvoiceProfit)} ج.م</div>
+              </div>
             </div>
           )}
         </Modal>

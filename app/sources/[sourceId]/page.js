@@ -31,6 +31,8 @@ export default function SourceDetailPage() {
   const [invoiceLines, setInvoiceLines] = useState([{ productId: '', productSearchText: '', wholesalePrice: '', quantity: '', storeId: '' }]);
   const [invoiceError, setInvoiceError] = useState('');
   const [savingInvoice, setSavingInvoice] = useState(false);
+  const [invoicePaid, setInvoicePaid] = useState('');
+  const [invoiceCustodyId, setInvoiceCustodyId] = useState('');
 
   // Payment modal state
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -157,6 +159,8 @@ export default function SourceDetailPage() {
   const openInvoiceModal = () => {
     setInvoiceLines([{ productId: '', productSearchText: '', wholesalePrice: '', quantity: '', storeId: '' }]);
     setInvoiceError('');
+    setInvoicePaid('');
+    setInvoiceCustodyId(custodies.length > 0 ? custodies[0].id : '');
     setIsInvoiceModalOpen(true);
   };
 
@@ -198,6 +202,11 @@ export default function SourceDetailPage() {
       }
     }
 
+    if (Number(invoicePaid) > 0 && !invoiceCustodyId) {
+      setInvoiceError('يرجى اختيار العهدة للسداد');
+      return;
+    }
+
     setSavingInvoice(true);
     setInvoiceError('');
 
@@ -231,6 +240,16 @@ export default function SourceDetailPage() {
       }
 
       await applyInvoiceToInventory(productsData);
+
+      const paidAmount = Number(invoicePaid) || 0;
+      if (paidAmount > 0) {
+        await addSourcePayment({
+          sourceId,
+          amount: paidAmount,
+          date: new Date(),
+          custodyId: invoiceCustodyId,
+        });
+      }
 
       setIsInvoiceModalOpen(false);
     } catch (err) {
@@ -728,8 +747,39 @@ export default function SourceDetailPage() {
               <HiPlus size={16} />
               إضافة صنف آخر
             </button>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>المدفوع</label>
+              <input
+                type="number"
+                className={styles.formInput}
+                placeholder="0"
+                value={invoicePaid}
+                onChange={(e) => setInvoicePaid(e.target.value)}
+                style={{ maxWidth: '250px' }}
+              />
+            </div>
+            {isOwner && Number(invoicePaid) > 0 && (
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>خصم من عهدة</label>
+                <select
+                  className={styles.formSelect}
+                  value={invoiceCustodyId}
+                  onChange={(e) => setInvoiceCustodyId(e.target.value)}
+                  style={{ maxWidth: '250px' }}
+                >
+                  {custodies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({formatPrice(c.amount)} ج.م)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className={styles.invoiceTotal}>
-              الإجمالي: {formatPrice(invoiceTotal)} ج.م
+              <div>إجمالي الفاتورة: {formatPrice(invoiceTotal)} ج.م</div>
+              <div>المتبقي قبل السداد: {formatPrice(invoiceTotal)} ج.م</div>
+              <div>المدفوع: {formatPrice(Number(invoicePaid) || 0)} ج.م</div>
+              <div>المتبقي بعد السداد: {formatPrice(invoiceTotal - (Number(invoicePaid) || 0))} ج.م</div>
             </div>
           </div>
         </Modal>

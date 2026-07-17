@@ -9,8 +9,8 @@ import Card from '../../../components/ui/Card';
 import Table from '../../../components/ui/Table';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
-import { getStore, subscribeToStoreProducts, subscribeToProducts, updateStoreProductQuantity } from '../../../lib/firebase/firestore';
-import { HiOfficeBuilding, HiCube, HiDatabase, HiArrowRight, HiUpload } from 'react-icons/hi';
+import { getStore, subscribeToStoreProducts, subscribeToProducts, updateStoreProductQuantity, subscribeAllSourceInvoices } from '../../../lib/firebase/firestore';
+import { HiOfficeBuilding, HiCube, HiDatabase, HiArrowRight, HiUpload, HiCurrencyDollar } from 'react-icons/hi';
 import * as XLSX from 'xlsx';
 import styles from './page.module.css';
 
@@ -22,6 +22,7 @@ export default function StoreDetailPage() {
   const [store, setStore] = useState(null);
   const [products, setProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
+  const [sourceInvoices, setSourceInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
@@ -53,6 +54,13 @@ export default function StoreDetailPage() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = subscribeAllSourceInvoices((data) => {
+      setSourceInvoices(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const filteredProducts = products.filter((p) => {
     const q = searchQuery.toLowerCase();
     return (p.productName || '').toLowerCase().includes(q);
@@ -60,6 +68,21 @@ export default function StoreDetailPage() {
 
   const totalProducts = products.length;
   const totalQuantity = products.reduce((sum, p) => sum + (Number(p.totalQuantity) || 0), 0);
+
+  const lastWholesalePriceMap = {};
+  for (const invoice of sourceInvoices) {
+    for (const line of (invoice.products || [])) {
+      if (!lastWholesalePriceMap[line.productId]) {
+        lastWholesalePriceMap[line.productId] = Number(line.wholesalePrice) || 0;
+      }
+    }
+  }
+
+  const totalStockValue = products.reduce((sum, p) => {
+    const price = lastWholesalePriceMap[p.productId] || 0;
+    return sum + (price * (Number(p.totalQuantity) || 0));
+  }, 0);
+
   const formatPrice = (val) => {
     const num = Number(val);
     return isNaN(num) ? '0' : num.toLocaleString();
@@ -183,6 +206,11 @@ export default function StoreDetailPage() {
                   title="إجمالي كمية المنتجات"
                   value={totalQuantity}
                   icon={HiDatabase}
+                />
+                <SummaryCard
+                  title="إجمالي سعر الاصناف"
+                  value={`${formatPrice(totalStockValue)} ج.م`}
+                  icon={HiCurrencyDollar}
                 />
               </div>
 

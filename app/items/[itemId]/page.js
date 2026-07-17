@@ -9,7 +9,7 @@ import Card from '../../../components/ui/Card';
 import Table from '../../../components/ui/Table';
 import styles from './page.module.css';
 import { getProduct, subscribeAllSourceInvoices, subscribeAllCustomerInvoices, subscribeToAllStoreProducts, subscribeToSources, subscribeToCustomers } from '../../../lib/firebase/firestore';
-import { HiArrowRight, HiCube, HiOfficeBuilding, HiTruck, HiUserGroup, HiClipboardList } from 'react-icons/hi';
+import { HiArrowRight, HiCube, HiOfficeBuilding, HiTruck, HiUserGroup } from 'react-icons/hi';
 
 export default function ItemDetailPage() {
   const router = useRouter();
@@ -103,11 +103,6 @@ export default function ItemDetailPage() {
 
   const totalInStores = storesWithProduct.reduce((sum, sp) => sum + (Number(sp.totalQuantity) || 0), 0);
 
-  // حساب آخر سعر توريد للصنف (آخر فاتورة توريد فيه الصنف ده)
-  const lastSupplyInvoice = relatedSourceInvoices.length > 0 ? relatedSourceInvoices[0] : null;
-  const lastSupplyLine = lastSupplyInvoice?.products?.find((p) => p.productId === itemId);
-  const lastSupplyPrice = lastSupplyLine?.wholesalePrice || 0;
-
   const formatPrice = (val) => {
     const num = Number(val);
     return isNaN(num) ? '0' : num.toLocaleString();
@@ -120,6 +115,15 @@ export default function ItemDetailPage() {
   };
 
   const formatCurrency = (val) => `${formatPrice(val)} ج.م`;
+
+  const last3SupplyPrices = relatedSourceInvoices.slice(0, 3).map((inv) => {
+    const line = inv.products.find((p) => p.productId === itemId);
+    return {
+      price: line?.wholesalePrice || 0,
+      source: getSourceName(inv.sourceId),
+      date: formatDate(inv.date),
+    };
+  });
 
   const supplyColumns = [
     { key: 'date', label: 'التاريخ' },
@@ -134,7 +138,7 @@ export default function ItemDetailPage() {
       id: inv.id,
       date: formatDate(inv.date),
       source: getSourceName(inv.sourceId),
-      price: formatCurrency(line?.supplyPrice || 0),
+      price: formatCurrency(line?.wholesalePrice || 0),
       qty: line?.quantity || 0,
     };
   });
@@ -205,8 +209,25 @@ export default function ItemDetailPage() {
                 <SummaryCard title="في المخازن" value={formatPrice(totalInStores)} icon={HiOfficeBuilding} />
                 <SummaryCard title="إجمالي المبيعات" value={formatPrice(totalSold)} icon={HiUserGroup} />
                 <SummaryCard title="إجمالي المشتريات" value={formatPrice(totalPurchased)} icon={HiTruck} />
-                <SummaryCard title="آخر سعر توريد" value={formatCurrency(lastSupplyPrice)} icon={HiTruck} />
               </div>
+
+              {last3SupplyPrices.length > 0 && (
+                <div className={styles.supplyPricesSection}>
+                  <h2 className={styles.sectionTitle}>
+                    <HiTruck size={18} style={{ marginLeft: '6px', verticalAlign: 'middle' }} />
+                    آخر 3 أسعار توريد
+                  </h2>
+                  <div className={styles.supplyPricesGrid}>
+                    {last3SupplyPrices.map((item, idx) => (
+                      <div key={idx} className={styles.supplyPriceCard}>
+                        <div className={styles.supplyPriceValue}>{formatCurrency(item.price)}</div>
+                        <div className={styles.supplyPriceSource}>{item.source}</div>
+                        <div className={styles.supplyPriceDate}>{item.date}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Stores */}
               <Card>
