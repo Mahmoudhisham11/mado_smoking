@@ -9,7 +9,7 @@ import Card from '../../../components/ui/Card';
 import Table from '../../../components/ui/Table';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
-import { getStore, subscribeToStoreProducts, subscribeToProducts, updateStoreProductQuantity, subscribeAllSourceInvoices } from '../../../lib/firebase/firestore';
+import { getStore, subscribeToStoreProducts, subscribeToProducts, updateStoreProductQuantity, setStoreProductQuantity, subscribeAllSourceInvoices } from '../../../lib/firebase/firestore';
 import { getUserFromLocalStorage } from '../../../lib/auth';
 import { HiOfficeBuilding, HiCube, HiDatabase, HiArrowRight, HiUpload, HiCurrencyDollar } from 'react-icons/hi';
 import * as XLSX from 'xlsx';
@@ -158,7 +158,7 @@ export default function StoreDetailPage() {
           errors.push(`المنتج "${productName}" غير موجود في قائمة الأصناف`);
           continue;
         }
-        const result = await updateStoreProductQuantity(storeId, product.id, product.name, qty);
+        const result = await setStoreProductQuantity(storeId, product.id, product.name, qty);
         if (result.success) imported++;
         else errors.push(`فشل تحديث كمية "${productName}": ${result.error}`);
       }

@@ -92,13 +92,13 @@ export default function ItemDetailPage() {
   );
 
   const totalSold = relatedCustomerInvoices.reduce((sum, inv) => {
-    const line = inv.products.find((p) => p.productId === itemId);
-    return sum + (line?.quantity || 0);
+    const lines = (inv.products || []).filter((p) => p.productId === itemId);
+    return sum + lines.reduce((lineSum, line) => lineSum + (Number(line.quantity) || 0), 0);
   }, 0);
 
   const totalPurchased = relatedSourceInvoices.reduce((sum, inv) => {
-    const line = inv.products.find((p) => p.productId === itemId);
-    return sum + (line?.quantity || 0);
+    const lines = (inv.products || []).filter((p) => p.productId === itemId);
+    return sum + lines.reduce((lineSum, line) => lineSum + (Number(line.quantity) || 0), 0);
   }, 0);
 
   const totalInStores = storesWithProduct.reduce((sum, sp) => sum + (Number(sp.totalQuantity) || 0), 0);
@@ -116,14 +116,14 @@ export default function ItemDetailPage() {
 
   const formatCurrency = (val) => `${formatPrice(val)} ج.م`;
 
-  const last3SupplyPrices = relatedSourceInvoices.slice(0, 3).map((inv) => {
-    const line = inv.products.find((p) => p.productId === itemId);
-    return {
-      price: line?.wholesalePrice || 0,
+  const last3SupplyPrices = relatedSourceInvoices.flatMap((inv) => {
+    const lines = (inv.products || []).filter((p) => p.productId === itemId);
+    return lines.map((line) => ({
+      price: line.wholesalePrice || 0,
       source: getSourceName(inv.sourceId),
       date: formatDate(inv.date),
-    };
-  });
+    }));
+  }).slice(0, 3);
 
   const supplyColumns = [
     { key: 'date', label: 'التاريخ' },
@@ -132,15 +132,15 @@ export default function ItemDetailPage() {
     { key: 'qty', label: 'الكمية' },
   ];
 
-  const supplyTableData = relatedSourceInvoices.map((inv) => {
-    const line = inv.products.find((p) => p.productId === itemId);
-    return {
-      id: inv.id,
+  const supplyTableData = relatedSourceInvoices.flatMap((inv) => {
+    const lines = (inv.products || []).filter((p) => p.productId === itemId);
+    return lines.map((line, idx) => ({
+      id: `${inv.id}-${idx}`,
       date: formatDate(inv.date),
       source: getSourceName(inv.sourceId),
       price: formatCurrency(line?.wholesalePrice || 0),
       qty: line?.quantity || 0,
-    };
+    }));
   });
 
   const salesColumns = [
@@ -155,15 +155,15 @@ export default function ItemDetailPage() {
     return c?.name || '—';
   };
 
-  const salesTableData = relatedCustomerInvoices.map((inv) => {
-    const line = inv.products.find((p) => p.productId === itemId);
-    return {
-      id: inv.id,
+  const salesTableData = relatedCustomerInvoices.flatMap((inv) => {
+    const lines = (inv.products || []).filter((p) => p.productId === itemId);
+    return lines.map((line, idx) => ({
+      id: `${inv.id}-${idx}`,
       date: formatDate(inv.date),
       customer: getCustomerName(inv.customerId),
       price: formatCurrency(line?.sellingPrice || 0),
       qty: line?.quantity || 0,
-    };
+    }));
   });
 
   return (

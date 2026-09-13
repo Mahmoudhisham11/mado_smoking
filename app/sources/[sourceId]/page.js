@@ -167,9 +167,16 @@ export default function SourceDetailPage() {
   const filteredInvoices = invoices.filter((inv) => isDateInRange(inv.date));
   const filteredPayments = payments.filter((p) => isDateInRange(p.date));
 
+  // All-time supplier balance (True Supplier Debt/Payable)
+  const allTimeTotalCost = invoices.reduce((sum, inv) => sum + (Number(inv.totalCost) || 0), 0);
+  const allTimeTotalPaid = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const allTimeRemaining = allTimeTotalCost - allTimeTotalPaid;
+
+  // Filtered period metrics
   const totalCost = filteredInvoices.reduce((sum, inv) => sum + (Number(inv.totalCost) || 0), 0);
   const totalPaid = filteredPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-  const remaining = totalCost - totalPaid;
+  const periodRemaining = totalCost - totalPaid;
+  const isFiltered = Boolean(filterDateFrom || filterDateTo);
 
   // Invoice helpers
   const openInvoiceModal = () => {
@@ -638,12 +645,12 @@ export default function SourceDetailPage() {
           ) : (
             <>
               <div className={styles.cardsGrid}>
-                <SummaryCard title="عدد الفواتير" value={`${filteredInvoices.length}`} icon={HiClipboardList} />
-                <SummaryCard title="إجمالي التوريد" value={`${formatPrice(totalCost)} ج.م`} icon={HiCurrencyDollar} />
-                <SummaryCard title="إجمالي المدفوع" value={`${formatPrice(totalPaid)} ج.م`} icon={HiCash} />
+                <SummaryCard title={isFiltered ? "فواتير الفترة" : "عدد الفواتير"} value={isFiltered ? `${filteredInvoices.length} فاتورة` : `${invoices.length} فاتورة`} icon={HiClipboardList} />
+                <SummaryCard title={isFiltered ? "إجمالي توريد الفترة" : "إجمالي التوريد"} value={`${formatPrice(totalCost)} ج.م`} icon={HiCurrencyDollar} />
+                <SummaryCard title={isFiltered ? "مدفوعات الفترة" : "إجمالي المدفوع"} value={`${formatPrice(totalPaid)} ج.م`} icon={HiCash} />
                 <SummaryCard
-                  title="المتبقي"
-                  value={`${formatPrice(remaining)} ج.م`}
+                  title={isFiltered ? "إجمالي المستحق للمورد (الحالي)" : "المتبقي (مستحقات المورد)"}
+                  value={`${formatPrice(allTimeRemaining)} ج.م`}
                   icon={HiDocumentReport}
                 />
               </div>

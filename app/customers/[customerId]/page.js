@@ -164,9 +164,16 @@ export default function CustomerDetailPage() {
   const filteredInvoices = invoices.filter((inv) => isDateInRange(inv.date));
   const filteredPayments = payments.filter((p) => isDateInRange(p.date));
 
+  // All-time customer balance (True Account Debt)
+  const allTimeTotalCost = invoices.reduce((sum, inv) => sum + (Number(inv.totalCost) || 0), 0);
+  const allTimeTotalPaid = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const allTimeRemaining = allTimeTotalCost - allTimeTotalPaid;
+
+  // Filtered period metrics
   const totalCost = filteredInvoices.reduce((sum, inv) => sum + (Number(inv.totalCost) || 0), 0);
   const totalPaid = filteredPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-  const remaining = totalCost - totalPaid;
+  const periodRemaining = totalCost - totalPaid;
+  const isFiltered = Boolean(filterDateFrom || filterDateTo);
 
   // Wholesale price map (last price per product)
   const lastWholesalePriceMap = {};
@@ -255,11 +262,16 @@ export default function CustomerDetailPage() {
       }
     }
 
-    // Validate paid amount against credit limit
+    // Validate remaining debt after invoice against credit limit
     const creditLimit = Number(customer?.creditLimit) || 0;
     const paidAmount = Number(invoicePaidAmount) || 0;
-    if (invoiceTotal > creditLimit && paidAmount < creditLimit) {
-      setCreditLimitError(`إجمالي الفاتورة (${formatPrice(invoiceTotal)}) يتجاوز حد الائتمان (${formatPrice(creditLimit)}) والمبلغ المدفوع (${formatPrice(paidAmount)}) أقل من الحد المطلوب`);
+    const currentDebt = allTimeRemaining;
+    const newDebt = currentDebt + (invoiceTotal - paidAmount);
+
+    if (creditLimit > 0 && newDebt > creditLimit) {
+      setCreditLimitError(
+        `إجمالي المديونية بعد الفاتورة (${formatPrice(newDebt)} ج.م) سيتجاوز حد الائتمان (${formatPrice(creditLimit)} ج.م). المديونية السابقة: ${formatPrice(currentDebt)} ج.م. يرجى سداد ${formatPrice(newDebt - creditLimit)} ج.م على الأقل لإتمام الفاتورة.`
+      );
       return;
     }
 
@@ -677,10 +689,14 @@ export default function CustomerDetailPage() {
           ) : (
             <>
               <div className={styles.cardsGrid}>
-                <SummaryCard title="عدد الفواتير" value={`${filteredInvoices.length}`} icon={HiClipboardList} />
-                <SummaryCard title="إجمالي الفواتير" value={`${formatPrice(totalCost)} ج.م`} icon={HiCurrencyDollar} />
-                <SummaryCard title="إجمالي المدفوع" value={`${formatPrice(totalPaid)} ج.م`} icon={HiCash} />
-                <SummaryCard title="المتبقي" value={`${formatPrice(remaining)} ج.م`} icon={HiDocumentReport} />
+                <SummaryCard title={isFiltered ? "فواتير الفترة" : "عدد الفواتير"} value={isFiltered ? `${filteredInvoices.length} فاتورة` : `${invoices.length} فاتورة`} icon={HiClipboardList} />
+                <SummaryCard title={isFiltered ? "إجمالي فواتير الفترة" : "إجمالي الفواتير"} value={`${formatPrice(totalCost)} ج.م`} icon={HiCurrencyDollar} />
+                <SummaryCard title={isFiltered ? "مدفوعات الفترة" : "إجمالي المدفوع"} value={`${formatPrice(totalPaid)} ج.م`} icon={HiCash} />
+                <SummaryCard
+                  title={isFiltered ? "إجمالي مديونية الحساب" : "المتبقي (المديونية)"}
+                  value={`${formatPrice(allTimeRemaining)} ج.م`}
+                  icon={HiDocumentReport}
+                />
               </div>
 
               {filteredInvoices.length === 0 ? (
