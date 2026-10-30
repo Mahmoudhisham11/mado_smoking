@@ -6,16 +6,26 @@ import AuthGuard from '../../components/auth/AuthGuard';
 import MainLayout from '../../components/layout/MainLayout';
 import SummaryCard from '../../components/dashboard/SummaryCard';
 import Card from '../../components/ui/Card';
-import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { logout } from '../../lib/firebase/auth';
-import { getUserFromLocalStorage } from '../../lib/auth';
-import { subscribeToStores, subscribeToCustomers, subscribeToSources, subscribeToProducts, subscribeToCustodies, subscribeToExpenses } from '../../lib/firebase/firestore';
-import { HiEye, HiEyeOff, HiLogout, HiCog, HiCube, HiOfficeBuilding, HiUserGroup, HiTruck, HiClipboardList, HiCash, HiArrowLeft } from 'react-icons/hi';
+import { useSession } from '../../contexts/AuthContext';
+import { sumMoney } from '../../lib/domain/accounting';
+import { subscribeToStores, subscribeToCustomers, subscribeToSources, subscribeToProducts, subscribeToCustodies, subscribeTodayExpenses } from '../../lib/firebase/firestore';
+import { HiEye, HiEyeOff, HiLogout, HiCog, HiCube, HiOfficeBuilding, HiUserGroup, HiTruck, HiClipboardList, HiCash, HiArrowLeft, HiChartBar } from 'react-icons/hi';
 import styles from './page.module.css';
 
 export default function HomePage() {
-  const { user } = useAuth();
+  return (
+    <AuthGuard>
+      <MainLayout>
+        <HomeContent />
+      </MainLayout>
+    </AuthGuard>
+  );
+}
+
+function HomeContent() {
+  const session = useSession();
   const { themeMode, setTheme } = useTheme();
   const router = useRouter();
   const [isNumbersHidden, setIsNumbersHidden] = useState(false);
@@ -29,29 +39,23 @@ export default function HomePage() {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const userData = getUserFromLocalStorage();
-  const userName = userData?.name || user?.displayName || 'مستخدم';
-  const userRole = userData?.role || 'user';
+  const userName = session.name || 'مستخدم';
+  const userRole = session.role;
 
   useEffect(() => {
     const unsub1 = subscribeToStores((data) => { setStores(data); setLoading(false); });
     const unsub2 = subscribeToCustomers((data) => setCustomers(data));
-    const unsub3 = subscribeToSources((data) => setSources(data));
+    // الموردين للمالك فقط (القواعد بتمنعها عن المستخدم العادي)
+    const unsub3 = session.isOwner ? subscribeToSources((data) => setSources(data)) : () => {};
     const unsub4 = subscribeToProducts((data) => setProducts(data));
     const unsub5 = subscribeToCustodies((data) => setCustodies(data));
-    const unsub6 = subscribeToExpenses((data) => setExpenses(data));
+    // مصاريف النهارده بس، مش كل المصاريف
+    const unsub6 = subscribeTodayExpenses((data) => setExpenses(data));
     return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); unsub6(); };
-  }, []);
+  }, [session.isOwner]);
 
-  const totalCustodyAmount = custodies.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-
-  const todayExpenses = expenses.filter((e) => {
-    if (!e.date) return false;
-    const d = e.date instanceof Date ? e.date : new Date(e.date);
-    const today = new Date();
-    return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
-  });
-  const todayExpensesTotal = todayExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  const totalCustodyAmount = sumMoney(custodies, (c) => c.amount);
+  const todayExpensesTotal = sumMoney(expenses, (e) => e.amount);
 
   const formatPrice = (val) => {
     const num = Number(val);
@@ -85,6 +89,7 @@ export default function HomePage() {
   };
 
   const quickActions = [
+    { label: 'التقارير', icon: HiChartBar, path: '/reports', color: '#c9a14a' },
     { label: 'الأصناف', icon: HiCube, path: '/items', color: '#3b82f6' },
     { label: 'المخازن', icon: HiOfficeBuilding, path: '/stores', color: '#10b981' },
     { label: 'العملاء', icon: HiUserGroup, path: '/customers', color: '#f59e0b' },
@@ -94,8 +99,7 @@ export default function HomePage() {
   ];
 
   return (
-    <AuthGuard>
-      <MainLayout>
+    <>
         <div className={styles.container}>
           <div className={styles.header}>
             <div className={styles.userSection} data-user-menu>
@@ -156,7 +160,6 @@ export default function HomePage() {
             </>
           )}
         </div>
-      </MainLayout>
-    </AuthGuard>
+    </>
   );
 }

@@ -1,0 +1,241 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--text-primary);
+}
+
+.footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.loading {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px 0;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.filters label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.filters input {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.25);
+  background: var(--background-color);
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
+.clear {
+  border: none;
+  background: transparent;
+  color: var(--primary-color);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--background-color);
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.12);
+  border-top: 3px solid rgba(var(--text-secondary-rgb), 0.25);
+}
+
+.card span {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.card strong {
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.card small {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.cardGreen {
+  border-top-color: #16a34a;
+}
+
+.cardGreen strong {
+  color: #16a34a;
+}
+
+.cardRed {
+  border-top-color: #ef4444;
+}
+
+.cardRed strong {
+  color: #ef4444;
+}
+
+.segment {
+  display: inline-flex;
+  align-self: flex-start;
+  background: var(--background-color);
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.15);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.segment button {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.segment .segmentActive {
+  background: var(--primary-color);
+  color: #fff;
+  font-weight: 700;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  max-height: 55vh;
+  overflow-y: auto;
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.12);
+  border-radius: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  background: var(--card-color);
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 10px;
+  border-bottom: 1px solid rgba(var(--text-secondary-rgb), 0.15);
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(var(--text-secondary-rgb), 0.08);
+  vertical-align: top;
+}
+
+.opening td {
+  font-weight: 700;
+  background: rgba(var(--text-secondary-rgb), 0.06);
+}
+
+.num {
+  text-align: left !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.balance {
+  font-weight: 800;
+}
+
+.pos {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.neg {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.time {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.ref {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.badge_invoice {
+  background: rgba(201, 161, 74, 0.15);
+  color: #a8812f;
+}
+
+.badge_payment {
+  background: rgba(22, 163, 74, 0.12);
+  color: #16a34a;
+}
+
+.badge_refund {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 24px !important;
+}
+
+@media (max-width: 640px) {
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

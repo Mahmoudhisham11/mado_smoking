@@ -1,23 +1,18 @@
-import withPWA from 'next-pwa';
-
 /** @type {import('next').NextConfig} */
-const baseConfig = {
+const nextConfig = {
   reactCompiler: true,
-};
-
-const pwaConfig = withPWA({
-  pwa: {
-    dest: 'public',
-    register: true,
-    skipWaiting: true,
-    disable: process.env.NODE_ENV === 'development',
-    // Disable runtime caching to avoid worker issues
-    runtimeCaching: [],
+  async headers() {
+    return [
+      {
+        // الـ service worker لازم مايتخزنش في الكاش عشان التحديثات توصل فوراً
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
+    ];
   },
-});
-
-// Merge base config with PWA config, ensuring reactCompiler is preserved
-export default {
-  ...pwaConfig,
-  ...baseConfig,
 };
+
+export default nextConfig;

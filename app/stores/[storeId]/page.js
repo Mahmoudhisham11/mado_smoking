@@ -9,13 +9,24 @@ import Card from '../../../components/ui/Card';
 import Table from '../../../components/ui/Table';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
-import { getStore, subscribeToStoreProducts, subscribeToProducts, updateStoreProductQuantity, setStoreProductQuantity, subscribeAllSourceInvoices } from '../../../lib/firebase/firestore';
-import { getUserFromLocalStorage } from '../../../lib/auth';
+import { getStore, subscribeToStoreProducts, subscribeToProducts, importStoreQuantities } from '../../../lib/firebase/firestore';
+import { normalizeName, safeMoney, safeQty } from '../../../lib/domain/accounting';
+import { useSession } from '../../../contexts/AuthContext';
 import { HiOfficeBuilding, HiCube, HiDatabase, HiArrowRight, HiUpload, HiCurrencyDollar } from 'react-icons/hi';
 import * as XLSX from 'xlsx';
 import styles from './page.module.css';
 
 export default function StoreDetailPage() {
+  return (
+    <AuthGuard>
+      <MainLayout>
+        <StoreDetailContent />
+      </MainLayout>
+    </AuthGuard>
+  );
+}
+
+function StoreDetailContent() {
   const router = useRouter();
   const params = useParams();
   const storeId = params.storeId;
@@ -23,7 +34,7 @@ export default function StoreDetailPage() {
   const [store, setStore] = useState(null);
   const [products, setProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
-  const [sourceInvoices, setSourceInvoices] = useState([]);
+  const [importMode, setImportMode] = useState('add');
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
@@ -31,8 +42,7 @@ export default function StoreDetailPage() {
   const [excelError, setExcelError] = useState('');
   const fileInputRef = useRef(null);
 
-  const userData = getUserFromLocalStorage();
-  const isOwner = (userData?.role || 'user') === 'owner';
+  const { isOwner } = useSession();
 
   useEffect(() => {
     const loadStore = async () => {
@@ -58,34 +68,17 @@ export default function StoreDetailPage() {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = subscribeAllSourceInvoices((data) => {
-      setSourceInvoices(data);
-    });
-    return () => unsubscribe();
-  }, []);
-
   const filteredProducts = products.filter((p) => {
     const q = searchQuery.toLowerCase();
     return (p.productName || '').toLowerCase().includes(q);
   });
 
   const totalProducts = products.length;
-  const totalQuantity = products.reduce((sum, p) => sum + (Number(p.totalQuantity) || 0), 0);
+  const totalQuantity = safeQty(products.reduce((sum, p) => sum + safeQty(p.totalQuantity), 0));
 
-  const lastWholesalePriceMap = {};
-  for (const invoice of sourceInvoices) {
-    for (const line of (invoice.products || [])) {
-      if (!lastWholesalePriceMap[line.productId]) {
-        lastWholesalePriceMap[line.productId] = Number(line.wholesalePrice) || 0;
-      }
-    }
-  }
-
-  const totalStockValue = products.reduce((sum, p) => {
-    const price = lastWholesalePriceMap[p.productId] || 0;
-    return sum + (price * (Number(p.totalQuantity) || 0));
-  }, 0);
+  // قيمة المخزون بآخر سعر توريد محفوظ على الصنف (بدل ما نحمّل كل فواتير الموردين)
+  const costById = new Map(allProducts.map((p) => [p.id, safeMoney(p.lastCost)]));
+  const totalStockValue = safeMoney(products.reduce((sum, p) => sum + (costById.get(p.productId) || 0) * safeQty(p.totalQuantity), 0));
 
   const formatPrice = (val) => {
     const num = Number(val);
@@ -143,25 +136,31 @@ export default function StoreDetailPage() {
       });
       if (nameCol < 0) nameCol = 0;
       if (qtyCol < 0) qtyCol = 1;
-      let imported = 0;
       let skipped = 0;
       const errors = [];
+      const productsByName = new Map(allProducts.map((p) => [normalizeName(p.name), p]));
+      const byProduct = new Map();
       for (let i = headerRowIdx + 1; i < rows.length; i++) {
         const r = rows[i];
         if (!r || !Array.isArray(r)) continue;
         const productName = String(r[nameCol] || '').trim();
-        const qty = Number(r[qtyCol]) || 0;
+        const qty = Number(r[qtyCol]);
         if (!productName) continue;
-        if (qty <= 0) { skipped++; continue; }
-        const product = allProducts.find(p => p.name === productName);
+        if (!Number.isFinite(qty) || qty < 0 || (importMode === 'add' && qty === 0)) { skipped++; continue; }
+        const product = productsByName.get(normalizeName(productName));
         if (!product) {
           errors.push(`المنتج "${productName}" غير موجود في قائمة الأصناف`);
           continue;
         }
-        const result = await setStoreProductQuantity(storeId, product.id, product.name, qty);
-        if (result.success) imported++;
-        else errors.push(`فشل تحديث كمية "${productName}": ${result.error}`);
+        const prev = byProduct.get(product.id);
+        byProduct.set(product.id, { productId: product.id, productName: product.name, quantity: (prev?.quantity || 0) + qty });
       }
+      const result = await importStoreQuantities(storeId, store?.name || '', [...byProduct.values()], importMode);
+      if (!result.success) {
+        setExcelError(result.error);
+        return;
+      }
+      const imported = byProduct.size;
       setIsExcelModalOpen(false);
       const msg = `تم تحديث كمية ${imported} منتج بنجاح${skipped > 0 ? ` (تم تخطي ${skipped} صنف بكمية غير صحيحة)` : ''}`;
       const errMsg = errors.length ? `\nالأخطاء:\n${errors.slice(0, 10).join('\n')}` : '';
@@ -176,8 +175,7 @@ export default function StoreDetailPage() {
   };
 
   return (
-    <AuthGuard>
-      <MainLayout>
+    <>
         <div className={styles.container}>
           <div className={styles.header}>
             <button className={styles.backButton} onClick={() => router.push('/stores')}>
@@ -260,7 +258,6 @@ export default function StoreDetailPage() {
             </>
           )}
         </div>
-      </MainLayout>
 
       {/* Excel Import Modal */}
       <Modal
@@ -288,12 +285,17 @@ export default function StoreDetailPage() {
             <li>اسم المنتج (الصنف / المنتج / الاسم)</li>
             <li>الكمية (الكمية / العدد)</li>
           </ul>
+          <label className={styles.formLabel}>طريقة الاستيراد</label>
+          <select className={styles.formSelect || styles.formInput} value={importMode} onChange={(e) => setImportMode(e.target.value)} style={{ marginBottom: '12px', width: '100%' }}>
+            <option value="add">إضافة الكمية على الموجود</option>
+            <option value="set">جرد: استبدال الكمية الموجودة بالكمية في الملف</option>
+          </select>
           <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-            سيتم زيادة الكمية المدخلة للمוצרים الموجودة في المخزن. يجب أن يكون المنتج موجوداً في قائمة الأصناف.
+            يجب أن يكون المنتج موجوداً في قائمة الأصناف. كل استيراد بيتسجل في سجل تسويات المخزون.
           </p>
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleExcelUpload} />
         </div>
       </Modal>
-    </AuthGuard>
+    </>
   );
 }

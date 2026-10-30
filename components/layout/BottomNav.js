@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
-import { HiHome, HiCube, HiOfficeBuilding, HiPlus, HiUserGroup, HiClipboardList, HiCash, HiTruck } from 'react-icons/hi';
+import { HiHome, HiCube, HiOfficeBuilding, HiPlus, HiUserGroup, HiClipboardList, HiCash, HiTruck, HiChartBar } from 'react-icons/hi';
 import styles from './BottomNav.module.css';
 
 export default function BottomNav() {
@@ -19,6 +19,7 @@ export default function BottomNav() {
   ];
 
   const menuItems = [
+    { path: '/reports', icon: HiChartBar, label: 'التقارير' },
     { path: '/customers', icon: HiUserGroup, label: 'العملاء' },
     { path: '/custodies', icon: HiClipboardList, label: 'العهد' },
     { path: '/expenses', icon: HiCash, label: 'المصاريف' },

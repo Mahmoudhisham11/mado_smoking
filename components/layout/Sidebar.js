@@ -1,11 +1,12 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
-import { HiHome, HiCube, HiOfficeBuilding, HiTruck, HiUserGroup, HiClipboardList, HiCash } from 'react-icons/hi';
+import { HiHome, HiCube, HiOfficeBuilding, HiTruck, HiUserGroup, HiClipboardList, HiCash, HiChartBar } from 'react-icons/hi';
 import styles from './Sidebar.module.css';
 
 const navItems = [
   { path: '/home', icon: HiHome, label: 'الرئيسية' },
+  { path: '/reports', icon: HiChartBar, label: 'التقارير' },
   { path: '/items', icon: HiCube, label: 'الأصناف' },
   { path: '/stores', icon: HiOfficeBuilding, label: 'المخازن' },
   { path: '/customers', icon: HiUserGroup, label: 'العملاء' },

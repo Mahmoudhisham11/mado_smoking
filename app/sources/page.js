@@ -9,43 +9,38 @@ import Card from '../../components/ui/Card';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import { subscribeToSources, addSource, updateSource, deleteSource } from '../../lib/firebase/firestore';
-import { getUserFromLocalStorage } from '../../lib/auth';
+import { useSession } from '../../contexts/AuthContext';
+import OwnerOnly from '../../components/auth/OwnerOnly';
 import { HiTruck, HiPencil, HiTrash, HiDocumentReport } from 'react-icons/hi';
 import styles from './page.module.css';
 
 export default function SourcesPage() {
+  return (
+    <AuthGuard>
+      <MainLayout>
+        <OwnerOnly>
+          <SourcesContent />
+        </OwnerOnly>
+      </MainLayout>
+    </AuthGuard>
+  );
+}
+
+function SourcesContent() {
   const router = useRouter();
   const [sources, setSources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingSource, setEditingSource] = useState(null);
-  const [formData, setFormData] = useState({ name: '' });
+  const [formData, setFormData] = useState({ name: '', phone: '' });
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [sourceToDelete, setSourceToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const userData = getUserFromLocalStorage();
-  const userRole = userData?.role || 'user';
-  const isOwner = userRole === 'owner';
-
-  if (!isOwner) {
-    return (
-      <AuthGuard>
-        <MainLayout>
-          <div className={styles.container}>
-            <Modal isOpen={true} onClose={() => router.push('/')} title="تنبيه" size="small" footer={
-              <Button variant="primary" onClick={() => router.push('/')}>العودة للرئيسية</Button>
-            }>
-              <p style={{ textAlign: 'center', padding: '16px 0' }}>ليس لديك الصلاحية للوصول الى هذه البيانات</p>
-            </Modal>
-          </div>
-        </MainLayout>
-      </AuthGuard>
-    );
-  }
+  const { isOwner } = useSession();
 
   useEffect(() => {
     const unsubscribe = subscribeToSources((data) => {
@@ -63,7 +58,7 @@ export default function SourcesPage() {
   const openAddModal = () => {
     if (!isOwner) return;
     setEditingSource(null);
-    setFormData({ name: '' });
+    setFormData({ name: '', phone: '' });
     setFormError('');
     setIsFormModalOpen(true);
   };
@@ -71,7 +66,7 @@ export default function SourcesPage() {
   const openEditModal = (source) => {
     if (!isOwner) return;
     setEditingSource(source);
-    setFormData({ name: source.name || '' });
+    setFormData({ name: source.name || '', phone: source.phone || '' });
     setFormError('');
     setIsFormModalOpen(true);
   };
@@ -83,7 +78,7 @@ export default function SourcesPage() {
   };
 
   const handleInputChange = (e) => {
-    setFormData({ name: e.target.value });
+    setFormData((prev) => ({ ...prev, name: e.target.value }));
   };
 
   const handleSave = async () => {
@@ -131,6 +126,7 @@ export default function SourcesPage() {
     try {
       const result = await deleteSource(sourceToDelete.id);
       if (!result.success) {
+        alert(result.error);
         setDeleteLoading(false);
         return;
       }
@@ -148,8 +144,7 @@ export default function SourcesPage() {
   };
 
   return (
-    <AuthGuard>
-      <MainLayout>
+    <>
         <div className={styles.container}>
           <PageHeader
             title="المصادر"
@@ -182,6 +177,9 @@ export default function SourcesPage() {
                   <div className={styles.sourceName}>
                     <HiTruck style={{ marginLeft: '8px', verticalAlign: 'middle', color: 'var(--primary-color)' }} />
                     {source.name}
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    {Number(source.balance) < 0 ? 'رصيد لنا' : 'المستحق للمورد'}: {Math.abs(Number(source.balance) || 0).toLocaleString()} ج.م
                   </div>
                   <div className={styles.sourceActions}>
                     <button
@@ -243,6 +241,16 @@ export default function SourcesPage() {
                 className={styles.formInput}
               />
             </div>
+            <div>
+              <label className={styles.formLabel}>رقم الهاتف / واتساب (اختياري)</label>
+              <input
+                type="tel"
+                placeholder="01xxxxxxxxx"
+                value={formData.phone}
+                onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                className={styles.formInput}
+              />
+            </div>
           </div>
         </Modal>
 
@@ -268,7 +276,6 @@ export default function SourcesPage() {
           <p>هل أنت متأكد أنك تريد حذف المصدر <strong>{sourceToDelete?.name}</strong>؟</p>
           <p style={{ color: '#ef4444', marginTop: '10px' }}>لا يمكن التراجع عن هذا الإجراء.</p>
         </Modal>
-      </MainLayout>
-    </AuthGuard>
+    </>
   );
 }

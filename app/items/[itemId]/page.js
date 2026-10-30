@@ -8,10 +8,21 @@ import SummaryCard from '../../../components/dashboard/SummaryCard';
 import Card from '../../../components/ui/Card';
 import Table from '../../../components/ui/Table';
 import styles from './page.module.css';
-import { getProduct, subscribeAllSourceInvoices, subscribeAllCustomerInvoices, subscribeToAllStoreProducts, subscribeToSources, subscribeToCustomers } from '../../../lib/firebase/firestore';
+import { getProduct, subscribeProductSourceInvoices, subscribeProductCustomerInvoices, subscribeToProductStock, subscribeToSources, subscribeToCustomers } from '../../../lib/firebase/firestore';
+import { useSession } from '../../../contexts/AuthContext';
 import { HiArrowRight, HiCube, HiOfficeBuilding, HiTruck, HiUserGroup } from 'react-icons/hi';
 
 export default function ItemDetailPage() {
+  return (
+    <AuthGuard>
+      <MainLayout>
+        <ItemDetailContent />
+      </MainLayout>
+    </AuthGuard>
+  );
+}
+
+function ItemDetailContent() {
   const router = useRouter();
   const params = useParams();
   const itemId = params.itemId;
@@ -24,6 +35,8 @@ export default function ItemDetailPage() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const { isOwner } = useSession();
+  const [historySize, setHistorySize] = useState(200);
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
 
@@ -36,25 +49,29 @@ export default function ItemDetailPage() {
     load();
   }, [itemId]);
 
+  // فواتير الصنف ده بس (بدل تحميل كل الفواتير وفلترتها في المتصفح)
   useEffect(() => {
-    const unsub = subscribeAllSourceInvoices((data) => setSourceInvoices(data));
+    if (!isOwner) return;
+    const unsub = subscribeProductSourceInvoices(itemId, historySize, setSourceInvoices);
     return () => unsub();
-  }, []);
+  }, [itemId, historySize, isOwner]);
 
   useEffect(() => {
-    const unsub = subscribeAllCustomerInvoices((data) => setCustomerInvoices(data));
+    const unsub = subscribeProductCustomerInvoices(itemId, historySize, setCustomerInvoices);
     return () => unsub();
-  }, []);
+  }, [itemId, historySize]);
 
   useEffect(() => {
-    const unsub = subscribeToAllStoreProducts((data) => setStoreProducts(data));
+    const unsub = subscribeToProductStock(itemId, setStoreProducts);
     return () => unsub();
-  }, []);
+  }, [itemId]);
 
+  // الموردين للمالك فقط
   useEffect(() => {
-    const unsub = subscribeToSources((data) => setSources(data));
+    if (!isOwner) return;
+    const unsub = subscribeToSources(setSources);
     return () => unsub();
-  }, []);
+  }, [isOwner]);
 
   useEffect(() => {
     const unsub = subscribeToCustomers((data) => setCustomers(data));
@@ -167,8 +184,7 @@ export default function ItemDetailPage() {
   });
 
   return (
-    <AuthGuard>
-      <MainLayout>
+    <>
         <div className={styles.container}>
           <div className={styles.header}>
             <button className={styles.backButton} onClick={() => router.push('/items')}>
@@ -261,10 +277,16 @@ export default function ItemDetailPage() {
                   <Table columns={salesColumns} data={salesTableData} />
                 )}
               </Card>
+              {(customerInvoices.length >= historySize || sourceInvoices.length >= historySize) && (
+                <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                  <button className={styles.emptyText} style={{ cursor: 'pointer', background: 'none', border: 'none', textDecoration: 'underline' }} onClick={() => setHistorySize((n) => n + 200)}>
+                    تحميل حركات أقدم
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
-      </MainLayout>
-    </AuthGuard>
+    </>
   );
 }

@@ -7,18 +7,41 @@ import PageHeader from '../../components/layout/PageHeader';
 import Card from '../../components/ui/Card';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
-import { subscribeToCustodies, updateCustody, createMissingCustodies, transferCustodyAmount } from '../../lib/firebase/firestore';
-import { getUserFromLocalStorage } from '../../lib/auth';
+import { subscribeToCustodies, subscribeToCustodyMovements, updateCustody, createMissingCustodies, transferCustodyAmount, getUsersByOwner } from '../../lib/firebase/firestore';
+import { useSession } from '../../contexts/AuthContext';
 import { HiClipboardList, HiSwitchHorizontal } from 'react-icons/hi';
 import styles from './page.module.css';
 
+const MOVEMENT_LABELS = {
+  opening: 'رصيد افتتاحي',
+  adjustment: 'تسوية يدوية',
+  customer_payment: 'تحصيل من عميل',
+  customer_refund: 'صرف لعميل',
+  source_payment: 'دفع لمورد',
+  source_refund: 'استرداد من مورد',
+  expense: 'مصروف',
+  transfer_in: 'تحويل وارد',
+  transfer_out: 'تحويل صادر',
+  reversal: 'إلغاء عملية',
+};
+
 export default function CustodiesPage() {
+  return (
+    <AuthGuard>
+      <MainLayout>
+        <Custodies />
+      </MainLayout>
+    </AuthGuard>
+  );
+}
+
+function Custodies() {
   const [custodies, setCustodies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingCustody, setEditingCustody] = useState(null);
-  const [formData, setFormData] = useState({ name: '', amount: '' });
+  const [formData, setFormData] = useState({ name: '', amount: '', note: '' });
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -30,20 +53,37 @@ export default function CustodiesPage() {
   const [transferError, setTransferError] = useState('');
   const [transferring, setTransferring] = useState(false);
 
-  const userData = getUserFromLocalStorage();
-  const userRole = userData?.role || 'user';
-  const isOwner = userRole === 'owner';
+  const { isOwner, ownerId } = useSession();
+  const [loadError, setLoadError] = useState('');
+
+  // سجل الحركات
+  const [historyCustody, setHistoryCustody] = useState(null);
+  const [movements, setMovements] = useState([]);
+  const [historySize, setHistorySize] = useState(50);
 
   useEffect(() => {
     const unsub = subscribeToCustodies((data) => {
       setCustodies(data);
-      if (data.length === 0) {
-        createMissingCustodies();
-      }
+      setLoading(false);
+    }, (msg) => {
+      setLoadError(msg);
       setLoading(false);
     });
     return () => unsub();
   }, []);
+
+  // إنشاء العهد الناقصة للمالك ومستخدميه (الـ ID ثابت فمفيش تكرار حتى لو اتنادت أكتر من مرة)
+  useEffect(() => {
+    if (!isOwner) return;
+    getUsersByOwner(ownerId).then((users) => createMissingCustodies(users.map((u) => ({ uid: u.uid || u.id, name: u.name }))));
+  }, [isOwner, ownerId]);
+
+  const historyId = historyCustody?.id;
+  useEffect(() => {
+    if (!historyId) return;
+    const unsub = subscribeToCustodyMovements(historyId, historySize, setMovements, setLoadError);
+    return () => unsub();
+  }, [historyId, historySize]);
 
   const filteredCustodies = custodies.filter((c) => {
     const q = searchQuery.toLowerCase();
@@ -53,7 +93,7 @@ export default function CustodiesPage() {
   const openEditModal = (custody) => {
     if (!isOwner) return;
     setEditingCustody(custody);
-    setFormData({ name: custody.name || '', amount: String(custody.amount || '') });
+    setFormData({ name: custody.name || '', amount: String(custody.amount ?? ''), note: '' });
     setFormError('');
     setIsEditModalOpen(true);
   };
@@ -80,6 +120,7 @@ export default function CustodiesPage() {
     const result = await updateCustody(editingCustody.id, {
       name: formData.name.trim(),
       amount: Number(formData.amount),
+      note: formData.note.trim(),
     });
 
     if (!result.success) {
@@ -134,9 +175,10 @@ export default function CustodiesPage() {
     setTransferring(false);
   };
 
+  const formatDateTime = (d) => (d ? d.toLocaleDateString('ar-EG') + ' ' + d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '');
+
   return (
-    <AuthGuard>
-      <MainLayout>
+    <>
         <div className={styles.container}>
           <PageHeader
             title="العهد"
@@ -150,6 +192,8 @@ export default function CustodiesPage() {
               </button>
             ) : null}
           />
+
+          {loadError && <div className={styles.errorMessage}>{loadError}</div>}
 
           {loading ? (
             <div className={styles.loading}>جاري التحميل...</div>
@@ -179,6 +223,13 @@ export default function CustodiesPage() {
                     </span>
                     <span className={styles.custodyAmountLabel}>ج.م</span>
                   </div>
+                  <button
+                    className={styles.editButton}
+                    onClick={() => { setHistorySize(50); setMovements([]); setHistoryCustody(custody); }}
+                    title="سجل الحركات"
+                  >
+                    سجل الحركات
+                  </button>
                   {isOwner && (
                     <button
                       className={styles.editButton}
@@ -222,7 +273,7 @@ export default function CustodiesPage() {
               />
             </div>
             <div>
-              <label className={styles.formLabel}>قيمة العهدة (ج.م)</label>
+              <label className={styles.formLabel}>رصيد العهدة الفعلي (ج.م)</label>
               <input
                 type="number"
                 placeholder="أدخل قيمة العهدة"
@@ -231,6 +282,21 @@ export default function CustodiesPage() {
                 className={styles.formInput}
               />
             </div>
+            <div>
+              <label className={styles.formLabel}>سبب التسوية</label>
+              <input
+                type="text"
+                placeholder="مثال: جرد النقدية"
+                value={formData.note}
+                onChange={(e) => setFormData((prev) => ({ ...prev, note: e.target.value }))}
+                className={styles.formInput}
+              />
+            </div>
+            {editingCustody && formData.amount !== '' && Number(formData.amount) !== Number(editingCustody.amount) && (
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                سيتم تسجيل تسوية بمبلغ {(Number(formData.amount) - Number(editingCustody.amount)).toLocaleString()} ج.م في سجل الحركات.
+              </p>
+            )}
           </div>
         </Modal>
 
@@ -280,7 +346,38 @@ export default function CustodiesPage() {
             </div>
           </div>
         </Modal>
-      </MainLayout>
-    </AuthGuard>
+      {/* Movements history */}
+      <Modal
+        isOpen={!!historyCustody}
+        onClose={() => setHistoryCustody(null)}
+        title={'سجل حركات: ' + (historyCustody?.name || '')}
+        size="large"
+        footer={null}
+      >
+        {movements.length === 0 ? (
+          <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>لا توجد حركات مسجلة.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {movements.map((m) => (
+              <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(var(--text-secondary-rgb), 0.12)' }}>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{MOVEMENT_LABELS[m.type] || m.type}{m.note ? ' - ' + m.note : ''}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{formatDateTime(m.createdAt)}{m.userName ? ' | ' + m.userName : ''}</div>
+                </div>
+                <div style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontWeight: 700, color: m.amount < 0 ? '#ef4444' : '#10b981' }}>{m.amount > 0 ? '+' : ''}{Number(m.amount).toLocaleString()}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>الرصيد: {Number(m.balanceAfter).toLocaleString()}</div>
+                </div>
+              </div>
+            ))}
+            {movements.length >= historySize && (
+              <div style={{ textAlign: 'center' }}>
+                <Button variant="secondary" onClick={() => setHistorySize((n) => n + 50)}>تحميل المزيد</Button>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+    </>
   );
 }

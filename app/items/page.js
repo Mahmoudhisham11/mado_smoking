@@ -15,6 +15,16 @@ import { HiCube, HiCurrencyDollar } from 'react-icons/hi';
 import styles from './page.module.css';
 
 export default function ItemsPage() {
+  return (
+    <AuthGuard>
+      <MainLayout>
+        <ItemsContent />
+      </MainLayout>
+    </AuthGuard>
+  );
+}
+
+function ItemsContent() {
   const router = useRouter();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -156,7 +166,11 @@ export default function ItemsPage() {
     if (!productToDelete) return;
     setDeleteLoading(true);
     try {
-      await deleteProduct(productToDelete.id);
+      const result = await deleteProduct(productToDelete.id);
+      if (!result.success) {
+        alert(result.error);
+        return;
+      }
       setIsDeleteModalOpen(false);
       setProductToDelete(null);
     } catch (err) {
@@ -183,18 +197,19 @@ export default function ItemsPage() {
     if (!confirm(`هل أنت متأكد من حذف ${selectedIds.length} صنف؟`)) return;
     setIsDeletingSelected(true);
     let deleted = 0;
+    const errors = [];
     for (const id of selectedIds) {
       const result = await deleteProduct(id);
       if (result.success) deleted++;
+      else errors.push(result.error);
     }
     setIsDeletingSelected(false);
     setSelectedIds([]);
-    alert(`تم حذف ${deleted} صنف بنجاح`);
+    alert(`تم حذف ${deleted} صنف${errors.length ? `\nلم يتم حذف ${errors.length}:\n${errors.slice(0, 5).join('\n')}` : ''}`);
   };
 
   return (
-    <AuthGuard>
-      <MainLayout>
+    <>
         <div className={styles.container}>
           <PageHeader
             title="الأصناف"
@@ -321,7 +336,6 @@ export default function ItemsPage() {
           <p>هل أنت متأكد أنك تريد حذف الصنف <strong>{productToDelete?.name}</strong>؟</p>
           <p style={{ color: '#ef4444', marginTop: '10px' }}>لا يمكن التراجع عن هذا الإجراء.</p>
         </Modal>
-      </MainLayout>
-    </AuthGuard>
+    </>
   );
 }

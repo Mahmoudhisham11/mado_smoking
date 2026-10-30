@@ -1,0 +1,118 @@
+rules_version = '2';
+
+// قواعد الحماية: كل البيانات مربوطة بـ ownerId، والـ ownerId بيتحسب من مستند
+// المستخدم على السيرفر (مش من localStorage)، فمستخدم مالك مايقدرش يشوف بيانات مالك تاني.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function me() {
+      return get(userPath()).data;
+    }
+
+    function isActive() {
+      return signedIn() && exists(userPath()) && me().get('isSubscribe', false) == true;
+    }
+
+    function isOwnerRole() {
+      return me().get('role', 'user') == 'owner';
+    }
+
+    function myOwner() {
+      let u = me();
+      return u.get('role', 'user') == 'owner'
+        ? request.auth.uid
+        : (u.get('ownerId', null) != null ? u.ownerId : request.auth.uid);
+    }
+
+    // قراءة مستند يخص نفس المالك (resource == null عشان قراءة مستند مش موجود جوه transaction)
+    function canReadOwned() {
+      return isActive() && (resource == null || resource.data.ownerId == myOwner());
+    }
+
+    function canCreateOwned() {
+      return isActive() && request.resource.data.ownerId == myOwner();
+    }
+
+    function canUpdateOwned() {
+      return isActive()
+        && resource.data.ownerId == myOwner()
+        && request.resource.data.ownerId == resource.data.ownerId;
+    }
+
+    function canDeleteOwned() {
+      return isActive() && resource.data.ownerId == myOwner();
+    }
+
+    // ---------- Users ----------
+    match /users/{uid} {
+      // resource == null: المالك بيتأكد إن المستخدم مش موجود قبل ما ينشئه
+      allow read: if signedIn() && (
+        request.auth.uid == uid ||
+        (isActive() && isOwnerRole() && (resource == null || resource.data.ownerId == request.auth.uid))
+      );
+
+      // تسجيل حساب جديد: لازم يبدأ غير مفعل وبصلاحية user
+      allow create: if signedIn() && (
+        (request.auth.uid == uid
+          && request.resource.data.isSubscribe == false
+          && request.resource.data.role == 'user'
+          && request.resource.data.ownerId == null)
+        ||
+        (isActive() && isOwnerRole()
+          && request.resource.data.ownerId == request.auth.uid
+          && request.resource.data.role in ['user', 'admin'])
+      );
+
+      allow update: if signedIn() && (
+        (request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'updatedAt']))
+        ||
+        (isActive() && isOwnerRole()
+          && resource.data.ownerId == request.auth.uid
+          && request.resource.data.ownerId == request.auth.uid
+          && request.resource.data.role in ['user', 'admin'])
+      );
+
+      allow delete: if isActive() && isOwnerRole() && resource.data.ownerId == request.auth.uid;
+    }
+
+    function isShared(coll) {
+      return coll in ['customers', 'customerInvoices', 'customerPayments', 'smokingProducts',
+                      'stores', 'storeProducts', 'storeTransfers', 'custodies', 'expenses',
+                      'inventoryAdjustments', 'counters'];
+    }
+
+    function isOwnerOnly(coll) {
+      return coll in ['sources', 'sourceInvoices', 'sourcePayments'];
+    }
+
+    // ---------- بيانات مشتركة بين المالك ومستخدميه / بيانات المالك فقط (الموردين) ----------
+    match /{coll}/{docId} {
+      allow read: if (isShared(coll) || (isOwnerOnly(coll) && isOwnerRole())) && canReadOwned();
+      allow create: if (isShared(coll) || (isOwnerOnly(coll) && isOwnerRole())) && canCreateOwned();
+      allow update: if (isShared(coll) || (isOwnerOnly(coll) && isOwnerRole())) && canUpdateOwned();
+      allow delete: if (isShared(coll) || (isOwnerOnly(coll) && isOwnerRole())) && canDeleteOwned();
+    }
+
+    // ---------- سجل حركات العهد: إضافة فقط، لا تعديل ولا حذف ----------
+    match /custodyMovements/{docId} {
+      allow read: if canReadOwned();
+      allow create: if canCreateOwned();
+      allow update, delete: if false;
+    }
+
+    // ---------- حالة ترحيل البيانات ----------
+    match /migrations/{ownerId} {
+      allow read: if isActive() && myOwner() == ownerId;
+      allow write: if isActive() && isOwnerRole() && request.auth.uid == ownerId;
+    }
+  }
+}

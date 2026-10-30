@@ -16,9 +16,10 @@ import {
   subscribeToAllStoreProducts,
   subscribeToStoreTransfers,
   addStoreTransfer,
+  updateStoreTransfer,
   deleteStoreTransfer,
 } from "../../lib/firebase/firestore";
-import { getUserFromLocalStorage } from "../../lib/auth";
+import { useSession } from "../../contexts/AuthContext";
 import {
   HiOfficeBuilding,
   HiPencil,
@@ -34,6 +35,16 @@ import {
 import styles from "./page.module.css";
 
 export default function StoresPage() {
+  return (
+    <AuthGuard>
+      <MainLayout>
+        <StoresContent />
+      </MainLayout>
+    </AuthGuard>
+  );
+}
+
+function StoresContent() {
   const router = useRouter();
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -67,10 +78,9 @@ export default function StoresPage() {
   const [transferToDelete, setTransferToDelete] = useState(null);
   const [deletingTransferLoading, setDeletingTransferLoading] = useState(false);
   const transferringRef = useRef(false);
+  const [transfersPageSize, setTransfersPageSize] = useState(100);
 
-  const userData = getUserFromLocalStorage();
-  const userRole = userData?.role || "user";
-  const isOwner = userRole === "owner";
+  const { isOwner } = useSession();
 
   useEffect(() => {
     const unsubscribe = subscribeToStores((data) => {
@@ -88,7 +98,7 @@ export default function StoresPage() {
   }, []);
 
   useEffect(() => {
-    const unsub = subscribeToStoreTransfers((data) => {
+    const unsub = subscribeToStoreTransfers(transfersPageSize, (data) => {
       const seen = new Set();
       const deduped = data.filter((t) => {
         if (seen.has(t.id)) return false;
@@ -98,7 +108,7 @@ export default function StoresPage() {
       setTransfers(deduped);
     });
     return () => unsub();
-  }, []);
+  }, [transfersPageSize]);
 
   const filteredStores = stores.filter((s) => {
     const q = searchQuery.toLowerCase();
@@ -191,6 +201,7 @@ export default function StoresPage() {
     try {
       const result = await deleteStore(storeToDelete.id);
       if (!result.success) {
+        alert(result.error);
         setDeleteLoading(false);
         return;
       }
@@ -289,24 +300,17 @@ export default function StoresPage() {
       quantity: Number(line.quantity),
     }));
 
-    // If editing, delete the old transfer first (reverts its inventory)
-    if (editingTransferId) {
-      const delResult = await deleteStoreTransfer(editingTransferId);
-      if (!delResult.success) {
-        transferringRef.current = false;
-        setTransferError(delResult.error || "فشل في حذف التحويلة القديمة");
-        setTransferring(false);
-        return;
-      }
-    }
-
-    const result = await addStoreTransfer({
+    const payload = {
       fromStoreId: transferFrom,
       fromStoreName: fromStore?.name || "",
       toStoreId: transferTo,
       toStoreName: toStore?.name || "",
       products,
-    });
+    };
+    // الإضافة والتعديل بيتحققوا من الكمية المتاحة جوه transaction واحد
+    const result = editingTransferId
+      ? await updateStoreTransfer(editingTransferId, payload)
+      : await addStoreTransfer(payload);
 
     if (!result.success) {
       transferringRef.current = false;
@@ -352,21 +356,19 @@ export default function StoresPage() {
     if (!transferToDelete) return;
     setDeletingTransferLoading(true);
     setDeletingTransferId(transferToDelete);
-    try {
-      await deleteStoreTransfer(transferToDelete);
-    } catch (err) {
-      console.error("Error deleting transfer:", err);
-    } finally {
-      setDeletingTransferId(null);
-      setDeletingTransferLoading(false);
-      setIsDeleteTransferModalOpen(false);
-      setTransferToDelete(null);
+    const result = await deleteStoreTransfer(transferToDelete);
+    setDeletingTransferId(null);
+    setDeletingTransferLoading(false);
+    if (!result.success) {
+      alert(result.error);
+      return;
     }
+    setIsDeleteTransferModalOpen(false);
+    setTransferToDelete(null);
   };
 
   return (
-    <AuthGuard>
-      <MainLayout>
+    <>
         <div className={styles.container}>
           <PageHeader
             title="المخازن"
@@ -720,6 +722,13 @@ export default function StoresPage() {
               </div>
             ))
           )}
+          {transfers.length >= transfersPageSize && (
+            <div style={{ textAlign: "center", marginTop: "12px" }}>
+              <Button variant="secondary" onClick={() => setTransfersPageSize((n) => n + 100)}>
+                تحميل المزيد
+              </Button>
+            </div>
+          )}
         </Modal>
 
         {/* Delete Transfer Confirmation Modal */}
@@ -757,7 +766,6 @@ export default function StoresPage() {
             سيتم إرجاع المنتجات للمخازن كما كانت قبل التحويل.
           </p>
         </Modal>
-      </MainLayout>
-    </AuthGuard>
+    </>
   );
 }

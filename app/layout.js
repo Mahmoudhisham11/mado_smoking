@@ -2,6 +2,7 @@ import "./globals.css";
 import { AuthProvider } from "../contexts/AuthContext";
 import { ThemeProvider } from "../contexts/ThemeContext";
 import { ToastProvider } from "../contexts/ToastContext";
+import ServiceWorkerRegister from "../components/layout/ServiceWorkerRegister";
 import { Tajawal } from "next/font/google";
 
 const tajawal = Tajawal({
@@ -41,6 +42,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ar" dir="rtl" className={tajawal.variable}>
       <body>
+        <ServiceWorkerRegister />
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>

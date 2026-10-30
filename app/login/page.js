@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { loginWithEmail, registerWithEmail, loginWithGoogle } from '../../lib/firebase/auth';
-import { saveUserToLocalStorage } from '../../lib/auth';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
@@ -59,17 +58,7 @@ export default function LoginPage() {
         const { getUser } = await import('../../lib/firebase/firestore');
         const userData = await getUser(result.user.uid);
         
-        // Only save to localStorage if account is subscribed
         if (userData?.isSubscribe) {
-          saveUserToLocalStorage({
-            uid: result.user.uid,
-            name: result.user.displayName || formData.name,
-            email: result.user.email,
-            role: userData?.role || 'user',
-            isSubscribe: true,
-            ownerId: userData?.ownerId || null,
-          });
-          
           // Redirect to home immediately
           router.push('/home');
         } else {
@@ -106,16 +95,7 @@ export default function LoginPage() {
         const { getUser } = await import('../../lib/firebase/firestore');
         const userData = await getUser(result.user.uid);
         
-        // Only save to localStorage if account is subscribed
         if (userData?.isSubscribe) {
-          saveUserToLocalStorage({
-            uid: result.user.uid,
-            name: result.user.displayName,
-            email: result.user.email,
-            role: userData?.role || 'user',
-            isSubscribe: true,
-          });
-          
           // Redirect to home immediately
           router.push('/home');
         } else {

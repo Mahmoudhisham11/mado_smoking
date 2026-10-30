@@ -1,0 +1,107 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 32px 16px;
+  background-color: var(--background-color);
+}
+
+.card {
+  width: 100%;
+  max-width: 760px;
+  background: var(--card-color);
+  border-radius: var(--border-radius);
+  padding: 24px;
+  color: var(--text-primary);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.text {
+  color: var(--text-secondary);
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+
+.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.steps {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.steps li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.15);
+  border-radius: 8px;
+}
+
+.done {
+  border-color: rgba(16, 185, 129, 0.5) !important;
+}
+
+.stepTitle {
+  font-weight: 600;
+}
+
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reportStep {
+  border: 1px solid rgba(var(--text-secondary-rgb), 0.15);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.reportStep summary {
+  cursor: pointer;
+}
+
+.warnBadge {
+  margin-right: 8px;
+  font-size: 12px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.warnings,
+.details {
+  margin-top: 8px;
+  padding-right: 18px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.warnings {
+  color: #b45309;
+}
+
+.details {
+  color: var(--text-secondary);
+}

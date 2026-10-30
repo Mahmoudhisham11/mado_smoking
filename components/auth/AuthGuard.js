@@ -3,11 +3,14 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
+import { MIGRATION_VERSION } from '../../lib/firebase/firestore';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import MigrationGate from '../maintenance/MigrationGate';
 import styles from './AuthGuard.module.css';
 
+// الصفحات بتحط محتواها كـ children، فالمحتوى (واشتراكاته) مايشتغلش غير بعد ما الجلسة تجهز
 export default function AuthGuard({ children }) {
-  const { user, userData, loading } = useAuth();
+  const { user, userData, session, migrationVersion, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -15,43 +18,22 @@ export default function AuthGuard({ children }) {
       if (!user) {
         router.push('/login');
       } else if (userData !== null && !userData.isSubscribe) {
-        // Account is not subscribed, redirect to login
         router.push('/login?error=account_disabled');
       }
     }
   }, [user, userData, loading, router]);
 
-  if (loading) {
-    return (
-      <div className={styles.loadingContainer}>
-        <LoadingSpinner />
-      </div>
-    );
-  }
+  const spinner = (
+    <div className={styles.loadingContainer}>
+      <LoadingSpinner />
+    </div>
+  );
 
-  if (!user) {
-    return null;
-  }
-
-  // Wait for userData to be loaded before checking subscription
-  if (userData === null) {
-    return (
-      <div className={styles.loadingContainer}>
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
-  // Check if account is subscribed
-  if (!userData.isSubscribe) {
-    // Redirecting to login, show loading while redirecting
-    return (
-      <div className={styles.loadingContainer}>
-        <LoadingSpinner />
-      </div>
-    );
-  }
+  if (loading) return spinner;
+  if (!user) return null;
+  if (userData === null || !userData.isSubscribe || !session) return spinner;
+  if (migrationVersion === null) return spinner;
+  if (migrationVersion < MIGRATION_VERSION) return <MigrationGate />;
 
   return <>{children}</>;
 }
-

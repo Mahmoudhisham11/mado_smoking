@@ -1,0 +1,243 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "customerInvoices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "customerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "customerPayments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "customerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "sourceInvoices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sourceId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "sourcePayments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sourceId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "expenses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "storeTransfers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "custodyMovements",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "custodyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "customerInvoices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "productIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "sourceInvoices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "productIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "customerInvoices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "customerPayments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "sourceInvoices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "sourcePayments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "inventoryAdjustments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "custodyMovements",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

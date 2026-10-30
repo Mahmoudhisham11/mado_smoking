@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import AuthGuard from '../../components/auth/AuthGuard';
 import MainLayout from '../../components/layout/MainLayout';
 import PageHeader from '../../components/layout/PageHeader';
@@ -10,13 +9,28 @@ import Card from '../../components/ui/Card';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import Table from '../../components/ui/Table';
+import OwnerOnly from '../../components/auth/OwnerOnly';
 import { subscribeToExpenses, addExpense, updateExpense, deleteExpense, subscribeToCustodies } from '../../lib/firebase/firestore';
-import { getUserFromLocalStorage } from '../../lib/auth';
+import { sumMoney } from '../../lib/domain/accounting';
+import { parseDateInput } from '../../lib/dates';
 import { HiCash, HiClipboardList, HiPencil, HiTrash } from 'react-icons/hi';
 import styles from './page.module.css';
 
+const PAGE_SIZE = 100;
+
 export default function ExpensesPage() {
-  const router = useRouter();
+  return (
+    <AuthGuard>
+      <MainLayout>
+        <OwnerOnly>
+          <Expenses />
+        </OwnerOnly>
+      </MainLayout>
+    </AuthGuard>
+  );
+}
+
+function Expenses() {
   const [expenses, setExpenses] = useState([]);
   const [custodies, setCustodies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,38 +61,29 @@ export default function ExpensesPage() {
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
 
-  const userData = getUserFromLocalStorage();
-  const userRole = userData?.role || 'user';
-  const isOwner = userRole === 'owner';
-
-  if (!isOwner) {
-    return (
-      <AuthGuard>
-        <MainLayout>
-          <div className={styles.container}>
-            <Modal isOpen={true} onClose={() => router.push('/')} title="تنبيه" size="small" footer={
-              <Button variant="primary" onClick={() => router.push('/')}>العودة للرئيسية</Button>
-            }>
-              <p style={{ textAlign: 'center', padding: '16px 0' }}>ليس لديك الصلاحية للوصول الى هذه البيانات</p>
-            </Modal>
-          </div>
-        </MainLayout>
-      </AuthGuard>
-    );
-  }
+  const isOwner = true;
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [loadError, setLoadError] = useState('');
+  const fromDate = parseDateInput(filterDateFrom);
+  const toDate = parseDateInput(filterDateTo);
+  const isFiltered = Boolean(fromDate || toDate);
+  const fromKey = fromDate?.getTime();
+  const toKey = toDate?.getTime();
 
   useEffect(() => {
-    const unsub = subscribeToExpenses((data) => {
+    const range = { from: fromKey ? new Date(fromKey) : null, to: toKey ? new Date(toKey) : null, pageSize };
+    const unsub = subscribeToExpenses(range, (data) => {
       setExpenses(data);
+      setLoading(false);
+    }, (msg) => {
+      setLoadError(msg);
       setLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [fromKey, toKey, pageSize]);
 
   useEffect(() => {
-    const unsub = subscribeToCustodies((data) => {
-      setCustodies(data);
-    });
+    const unsub = subscribeToCustodies(setCustodies, setLoadError);
     return () => unsub();
   }, []);
 
@@ -88,26 +93,14 @@ export default function ExpensesPage() {
     return d.toLocaleDateString('ar-EG') + ' ' + d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const toDateOnly = (d) => {
-    const dt = d instanceof Date ? d : new Date(d);
-    return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
-  };
-
-  const isDateInRange = (itemDate) => {
-    if (!filterDateFrom && !filterDateTo) return true;
-    const d = toDateOnly(itemDate);
-    if (filterDateFrom && d < toDateOnly(new Date(filterDateFrom))) return false;
-    if (filterDateTo && d > toDateOnly(new Date(filterDateTo))) return false;
-    return true;
-  };
-
-  const filteredExpenses = expenses.filter((e) => isDateInRange(e.date));
-  const totalExpenses = filteredExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  // الفلترة بالتاريخ بتحصل في الاستعلام نفسه
+  const filteredExpenses = expenses;
+  const totalExpenses = sumMoney(expenses, (e) => e.amount);
 
   const openAddModal = () => {
     setExpenseAmount('');
     setExpenseNotes('');
-    setExpenseCustodyId(isOwner && custodies.length > 0 ? custodies[0].id : '');
+    setExpenseCustodyId(custodies.length > 0 ? custodies[0].id : '');
     setExpenseError('');
     setIsAddModalOpen(true);
   };
@@ -216,15 +209,14 @@ export default function ExpensesPage() {
   const handleDeleteExpense = async () => {
     if (!expenseToDelete) return;
     setDeleting(true);
-    try {
-      await deleteExpense(expenseToDelete.id);
-      setIsDeleteModalOpen(false);
-      setExpenseToDelete(null);
-    } catch (err) {
-      console.error('Error deleting expense:', err);
-    } finally {
-      setDeleting(false);
+    const result = await deleteExpense(expenseToDelete.id);
+    setDeleting(false);
+    if (!result.success) {
+      alert(result.error);
+      return;
     }
+    setIsDeleteModalOpen(false);
+    setExpenseToDelete(null);
   };
 
   const handleTableAction = (action, row) => {
@@ -251,8 +243,7 @@ export default function ExpensesPage() {
   }));
 
   return (
-    <AuthGuard>
-      <MainLayout>
+    <>
         <div className={styles.container}>
           <PageHeader
             title="المصاريف"
@@ -278,11 +269,13 @@ export default function ExpensesPage() {
             )}
           </div>
 
+          {loadError && <div className={styles.errorMessage}>{loadError}</div>}
+
           {loading ? (
             <div className={styles.loading}>جاري التحميل...</div>
           ) : (
             <div className={styles.summaryCards}>
-              <SummaryCard title="إجمالي المصاريف" value={`${totalExpenses.toLocaleString()} ج.م`} icon={HiCash} />
+              <SummaryCard title={isFiltered ? 'إجمالي مصاريف الفترة' : 'إجمالي المصاريف المعروضة'} value={`${totalExpenses.toLocaleString()} ج.م`} icon={HiCash} />
             </div>
           )}
 
@@ -301,6 +294,11 @@ export default function ExpensesPage() {
               actions={isOwner ? ['تعديل', 'حذف'] : []}
               onAction={handleTableAction}
             />
+          )}
+          {!loading && !isFiltered && expenses.length >= pageSize && (
+            <div style={{ textAlign: 'center', marginTop: '12px' }}>
+              <button className={styles.clearFilterBtn} onClick={() => setPageSize((n) => n + PAGE_SIZE)}>تحميل المزيد</button>
+            </div>
           )}
         </div>
 
@@ -405,7 +403,6 @@ export default function ExpensesPage() {
           )}
           <p style={{ color: '#ef4444', marginTop: '12px' }}>سيتم إرجاع المبلغ للعهدة إذا كان مسجلاً على عهدة.</p>
         </Modal>
-      </MainLayout>
-    </AuthGuard>
+    </>
   );
 }

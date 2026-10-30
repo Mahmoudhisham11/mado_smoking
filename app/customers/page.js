@@ -9,11 +9,21 @@ import Card from '../../components/ui/Card';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import { subscribeToCustomers, addCustomer, updateCustomer, deleteCustomer } from '../../lib/firebase/firestore';
-import { getUserFromLocalStorage } from '../../lib/auth';
+import { useSession } from '../../contexts/AuthContext';
 import { HiUserGroup, HiPencil, HiTrash, HiDocumentReport } from 'react-icons/hi';
 import styles from './page.module.css';
 
 export default function CustomersPage() {
+  return (
+    <AuthGuard>
+      <MainLayout>
+        <CustomersContent />
+      </MainLayout>
+    </AuthGuard>
+  );
+}
+
+function CustomersContent() {
   const router = useRouter();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,9 +37,7 @@ export default function CustomersPage() {
   const [customerToDelete, setCustomerToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const userData = getUserFromLocalStorage();
-  const userRole = userData?.role || 'user';
-  const isOwner = userRole === 'owner';
+  const { isOwner } = useSession();
 
   useEffect(() => {
     const unsubscribe = subscribeToCustomers((data) => {
@@ -119,6 +127,7 @@ export default function CustomersPage() {
     try {
       const result = await deleteCustomer(customerToDelete.id);
       if (!result.success) {
+        alert(result.error);
         setDeleteLoading(false);
         return;
       }
@@ -136,8 +145,7 @@ export default function CustomersPage() {
   };
 
   return (
-    <AuthGuard>
-      <MainLayout>
+    <>
         <div className={styles.container}>
           <PageHeader
             title="العملاء"
@@ -172,6 +180,9 @@ export default function CustomersPage() {
                     {customer.name}
                   </div>
                   {customer.phone && <div className={styles.customerPhone}>{customer.phone}</div>}
+                  <div className={styles.customerPhone} style={{ color: Number(customer.balance) > 0 ? '#ef4444' : 'var(--text-secondary)' }}>
+                    {Number(customer.balance) < 0 ? 'رصيد دائن' : 'المديونية'}: {Math.abs(Number(customer.balance) || 0).toLocaleString()} ج.م
+                  </div>
                   <div className={styles.customerActions}>
                     <button
                       className={styles.reportButton}
@@ -277,7 +288,6 @@ export default function CustomersPage() {
           <p>هل أنت متأكد أنك تريد حذف العميل <strong>{customerToDelete?.name}</strong>؟</p>
           <p style={{ color: '#ef4444', marginTop: '10px' }}>لا يمكن التراجع عن هذا الإجراء.</p>
         </Modal>
-      </MainLayout>
-    </AuthGuard>
+    </>
   );
 }

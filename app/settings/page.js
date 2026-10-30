@@ -9,20 +9,30 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import UserForm from '../../components/ui/UserForm';
 import Table from '../../components/ui/Table';
-import { useAuth } from '../../contexts/AuthContext';
+import { useSession } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { getUserFromLocalStorage } from '../../lib/auth';
 import { createUserByOwner, deleteUserByOwner } from '../../lib/firebase/auth';
-import { getUsersByOwner, updateUserRole, updateUserData } from '../../lib/firebase/firestore';
+import { getUsersByOwner, updateUserRole, updateUserData, exportBackup } from '../../lib/firebase/firestore';
+import { downloadJson, backupFilename } from '../../lib/download';
 import { HiUser, HiMail, HiShieldCheck, HiUserAdd, HiPencil, HiTrash } from 'react-icons/hi';
 import styles from './page.module.css';
 
 export default function SettingsPage() {
-    const { user, userData } = useAuth();
+    return (
+        <AuthGuard>
+            <MainLayout>
+                <Settings />
+            </MainLayout>
+        </AuthGuard>
+    );
+}
+
+function Settings() {
+    const session = useSession();
     const { showSuccess, showError, showWarning } = useToast();
-    const [localUserData, setLocalUserData] = useState(null);
+    const [backupLoading, setBackupLoading] = useState(false);
     const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(session.isOwner);
     const [showUserForm, setShowUserForm] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
     const [formLoading, setFormLoading] = useState(false);
@@ -33,21 +43,22 @@ export default function SettingsPage() {
     const [deleteError, setDeleteError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
 
-    useEffect(() => {
-        const data = getUserFromLocalStorage();
-        setLocalUserData(data);
 
-        // Load users if owner
-        if (data?.role === 'owner') {
-            loadUsers();
-        } else {
-            setLoading(false);
+    const handleBackup = async () => {
+        setBackupLoading(true);
+        const result = await exportBackup();
+        setBackupLoading(false);
+        if (!result.success) {
+            showError(result.error);
+            return;
         }
-    }, [userData]);
+        downloadJson(result.backup, backupFilename());
+        showSuccess('تم تحميل النسخة الاحتياطية');
+    };
 
     const loadUsers = async () => {
         try {
-            const ownerId = localUserData?.uid || user?.uid;
+            const ownerId = session.uid;
             if (ownerId) {
                 const usersList = await getUsersByOwner(ownerId);
                 setUsers(usersList);
@@ -58,6 +69,14 @@ export default function SettingsPage() {
             setLoading(false);
         }
     };
+
+    // Load users if owner
+    useEffect(() => {
+        if (!session.isOwner) return;
+        getUsersByOwner(session.uid)
+            .then(setUsers)
+            .finally(() => setLoading(false));
+    }, [session.isOwner, session.uid]);
 
     const handleAddUser = () => {
         setEditingUser(null);
@@ -76,7 +95,7 @@ export default function SettingsPage() {
         setError('');
 
         try {
-            const ownerId = localUserData?.uid || user?.uid;
+            const ownerId = session.uid;
 
             if (editingUser) {
                 // Update existing user
@@ -117,16 +136,7 @@ export default function SettingsPage() {
                     setShowUserForm(false);
                     await loadUsers(); // Reload users list
 
-                    // If owner was logged out, show message
-                    if (result.requiresReauth) {
-                        showSuccess('تم إنشاء المستخدم بنجاح. يرجى تسجيل الدخول مرة أخرى.');
-                        // Redirect to login after a short delay
-                        setTimeout(() => {
-                            window.location.href = '/login';
-                        }, 2000);
-                    } else {
-                        showSuccess('تم إنشاء المستخدم بنجاح');
-                    }
+                    showSuccess('تم إنشاء المستخدم بنجاح');
                 } else {
                     setError(result.error || 'فشل في إنشاء المستخدم');
                 }
@@ -203,10 +213,10 @@ export default function SettingsPage() {
         setDeleteError('');
     };
 
-    const userRole = localUserData?.role || userData?.role || 'user';
+    const userRole = session.role || 'user';
     const isOwner = userRole === 'owner';
-    const userName = localUserData?.name || user?.displayName || 'مستخدم';
-    const userEmail = localUserData?.email || user?.email || '';
+    const userName = session.name || 'مستخدم';
+    const userEmail = session.email || '';
 
     // Filter users based on search query
     const filteredUsers = users.filter((u) => {
@@ -243,8 +253,7 @@ export default function SettingsPage() {
     };
 
     return (
-        <AuthGuard>
-            <MainLayout>
+        <>
 
                 <div className={styles.container}>
                     <PageHeader
@@ -256,6 +265,17 @@ export default function SettingsPage() {
                         onSearchChange={setSearchQuery}
                         showSearch={isOwner && users.length > 0}
                     />
+                    {isOwner && (
+                        <Card className={styles.card}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                                <div>
+                                    <div style={{ fontWeight: 700 }}>نسخة احتياطية</div>
+                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>تحميل كل بيانات الحساب كملف JSON</div>
+                                </div>
+                                <Button variant="secondary" onClick={handleBackup} loading={backupLoading}>تحميل نسخة احتياطية</Button>
+                            </div>
+                        </Card>
+                    )}
                     {/* Account Information */}
                     <Card className={styles.card}>
                         <div className={styles.sectionHeader}>
@@ -411,8 +431,7 @@ export default function SettingsPage() {
                         )}
                     </div>
                 </Modal>
-            </MainLayout>
-        </AuthGuard>
+        </>
     );
 }
 
