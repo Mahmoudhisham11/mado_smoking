@@ -116,7 +116,6 @@ function HomeContent() {
                 <div className={styles.dropdownMenu}>
                   <button className={`${styles.menuItem} ${themeMode === 'dark' ? styles.menuItemActive : ''}`} onClick={() => { setTheme('dark'); setShowUserMenu(false); }}>🌙 الوضع الداكن</button>
                   <button className={`${styles.menuItem} ${themeMode === 'light' ? styles.menuItemActive : ''}`} onClick={() => { setTheme('light'); setShowUserMenu(false); }}>☀️ الوضع الفاتح</button>
-                  <button className={`${styles.menuItem} ${themeMode === 'system' ? styles.menuItemActive : ''}`} onClick={() => { setTheme('system'); setShowUserMenu(false); }}>💻 حسب الجهاز</button>
                   <div className={styles.divider}></div>
                   <button className={`${styles.menuItem} ${styles.menuItemLogout}`} onClick={handleLogout}><HiLogout size={18} /> تسجيل الخروج</button>
                 </div>

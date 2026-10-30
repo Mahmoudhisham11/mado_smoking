@@ -1,72 +1,60 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useSyncExternalStore } from 'react';
 
 const ThemeContext = createContext(null);
+const STORAGE_KEY = 'theme-mode';
+const listeners = new Set();
+
+const readTheme = () => {
+  try {
+    return localStorage.getItem(STORAGE_KEY) === 'light' ? 'light' : 'dark';
+  } catch {
+    return 'dark';
+  }
+};
+
+const subscribe = (listener) => {
+  listeners.add(listener);
+  // التغيير من تاب تاني
+  const onStorage = (e) => {
+    if (e.key === STORAGE_KEY) listener();
+  };
+  window.addEventListener('storage', onStorage);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener('storage', onStorage);
+  };
+};
+
+// سكريبت صغير في <head> بيطبق الوضع الفاتح قبل أول رسم للصفحة (من غير وميض)
+export const themeInitScript = `try{if(localStorage.getItem('${STORAGE_KEY}')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}`;
 
 export function ThemeProvider({ children }) {
-  const [themeMode, setThemeMode] = useState('system'); // 'dark', 'light', or 'system'
-  const [resolvedTheme, setResolvedTheme] = useState('dark'); // 'dark' or 'light'
+  // الوضع الداكن هو الافتراضي (وعلى السيرفر)
+  const resolvedTheme = useSyncExternalStore(subscribe, readTheme, () => 'dark');
 
-  // Get system preference
-  const getSystemTheme = () => {
-    if (typeof window === 'undefined') return 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  };
-
-  // Resolve theme based on mode
-  const resolveTheme = (mode) => {
-    if (mode === 'system') {
-      return getSystemTheme();
-    }
-    return mode;
-  };
-
-  // Initialize theme
   useEffect(() => {
-    // Load saved preference from localStorage
-    const savedTheme = localStorage.getItem('theme-mode');
-    if (savedTheme && ['dark', 'light', 'system'].includes(savedTheme)) {
-      setThemeMode(savedTheme);
-    }
-
-    // Set initial resolved theme
-    const initialResolved = resolveTheme(savedTheme || 'system');
-    setResolvedTheme(initialResolved);
-    document.documentElement.setAttribute('data-theme', initialResolved);
-  }, []);
-
-  // Update resolved theme when themeMode changes
-  useEffect(() => {
-    const resolved = resolveTheme(themeMode);
-    setResolvedTheme(resolved);
-    document.documentElement.setAttribute('data-theme', resolved);
-    localStorage.setItem('theme-mode', themeMode);
-  }, [themeMode]);
-
-  // Listen to system theme changes
-  useEffect(() => {
-    if (themeMode !== 'system') return;
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e) => {
-      const newTheme = e.matches ? 'dark' : 'light';
-      setResolvedTheme(newTheme);
-      document.documentElement.setAttribute('data-theme', newTheme);
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [themeMode]);
+    document.documentElement.setAttribute('data-theme', resolvedTheme);
+  }, [resolvedTheme]);
 
   const setTheme = (mode) => {
-    if (['dark', 'light', 'system'].includes(mode)) {
-      setThemeMode(mode);
+    const nextTheme = mode === 'light' ? 'light' : 'dark';
+    try {
+      localStorage.setItem(STORAGE_KEY, nextTheme);
+    } catch {
+      // localStorage ممكن يكون مقفول (private mode)
     }
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    listeners.forEach((listener) => listener());
+  };
+
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
 
   return (
-    <ThemeContext.Provider value={{ themeMode, resolvedTheme, setTheme }}>
+    <ThemeContext.Provider value={{ themeMode: resolvedTheme, resolvedTheme, setTheme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -79,8 +67,3 @@ export function useTheme() {
   }
   return context;
 }
-
-
-
-
-

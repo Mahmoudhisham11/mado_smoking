@@ -1,6 +1,6 @@
 import "./globals.css";
 import { AuthProvider } from "../contexts/AuthContext";
-import { ThemeProvider } from "../contexts/ThemeContext";
+import { ThemeProvider, themeInitScript } from "../contexts/ThemeContext";
 import { ToastProvider } from "../contexts/ToastContext";
 import ServiceWorkerRegister from "../components/layout/ServiceWorkerRegister";
 import { Tajawal } from "next/font/google";
@@ -35,13 +35,18 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 2,
+  // الكيبورد على أندرويد بيصغّر مساحة الصفحة، فأزرار النوافذ بتفضل فوقه
+  interactiveWidget: "resizes-content",
   themeColor: "#000000",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ar" dir="rtl" className={tajawal.variable}>
-      <body>
+    <html lang="ar" dir="rtl" className={tajawal.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className="m-root">
         <ServiceWorkerRegister />
         <ThemeProvider>
           <AuthProvider>

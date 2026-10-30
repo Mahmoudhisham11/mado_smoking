@@ -2,20 +2,27 @@
 
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
-import styles from './MainLayout.module.css';
+import { useSession } from '../../contexts/AuthContext';
 
 export default function MainLayout({ children }) {
+  const session = useSession();
+  const { isOwner, role = 'staff' } = session;
+  const roleTitle = isOwner ? 'مالك' : role === 'admin' ? 'مدير' : 'موظف';
+
   return (
-    <div className={styles.container}>
-      <div className={styles.sidebarWrapper}>
-        <Sidebar />
+    <div className="m-app">
+      <Sidebar />
+      <div className="m-col">
+        <header className="m-topbar">
+          <div className="m-row" style={{ justifyContent: 'flex-start', gap: '10px' }}>
+            <img src="/assets/Logo/mado-logo.png" alt="مادو للتدخين" />
+            <b className="t-sub">مادو للتدخين</b>
+          </div>
+          <span className="m-badge m-badge--gold">{roleTitle}</span>
+        </header>
+        <main className="m-main">{children}</main>
       </div>
-      <main className={styles.mainContent}>
-        {children}
-      </main>
-      <div className={styles.bottomNavWrapper}>
-        <BottomNav />
-      </div>
+      <BottomNav />
     </div>
   );
 }

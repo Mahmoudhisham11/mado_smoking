@@ -1,0 +1,43 @@
+{
+ "v": 3,
+ "layout": "files",
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-30T18:41:09.922Z"
+ },
+ "title": "Mado Smoking",
+ "namespace": "Mado",
+ "libraries": [],
+ "sections": {},
+ "groups": [
+  "Logo"
+ ],
+ "assetGroups": {
+  "Logo": {
+   "name": "Logo",
+   "tile": "m",
+   "order": [
+    "mado-logo.png"
+   ],
+   "files": {
+    "mado-logo.png": {
+     "name": "mado-logo.png",
+     "blob": "5b92730262d6cce61985d5259402b3a5",
+     "size": 40198,
+     "type": "image/png"
+    }
+   }
+  }
+ },
+ "blobs": {},
+ "docs": {
+  "readme": "project/README.md",
+  "sections": []
+ },
+ "lastChange": {
+  "by": "Mahmoud",
+  "at": "2026-10-30T18:41:09.922Z",
+  "via": "Claude (Cowork)",
+  "note": "أول نسخة: توكنز، مكونات، 16 شاشة"
+ }
+}

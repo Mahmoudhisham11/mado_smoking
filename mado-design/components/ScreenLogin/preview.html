@@ -1,0 +1,38 @@
+<!-- @dsCard group="الشاشات" height=960 subtitle="1 · تسجيل الدخول" -->
+<style>
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans)}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 12px;direction:rtl;position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--border)}
+.bar .g{display:flex;gap:2px;padding:3px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-sunken)}
+.bar button{font:inherit;font-size:13px;font-weight:500;min-height:30px;padding:0 12px;border-radius:7px;border:0;background:none;color:var(--ink-muted);cursor:pointer}
+.bar button.on{background:var(--gold);color:var(--on-gold);font-weight:700}
+.bar .sp{flex:1}
+#stage{padding:14px 0 18px;display:flex;justify-content:center;overflow:hidden}
+#sc{flex:none;transform-origin:top center;border-radius:18px;box-shadow:0 0 0 1px var(--border-strong),var(--shadow-pop);overflow:hidden}
+</style>
+<div class="bar"><div class="g" id="gv"><button data-view="a" class="on">الدخول</button><button data-view="b" class="">الحساب غير مفعل</button></div><div class="sp"></div><div class="g" id="gp"><button data-vp="m" class="on">موبايل 390</button><button data-vp="d">كمبيوتر 1440</button></div><div class="g" id="gt"><button data-th="dark" class="on">داكن</button><button data-th="light">فاتح</button></div></div>
+<div id="stage"><div id="sc"><div class="m-root" id="ab" data-theme="dark"></div></div></div>
+<template data-v="a"><div style="height:100%;display:grid;place-items:center;padding:24px;background:var(--bg)"><div style="width:100%;max-width:440px;display:flex;flex-direction:column;gap:24px">
+<div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px"><img src="/_blob/5b92730262d6cce61985d5259402b3a5" alt="Mado Smoking" style="width:96px;height:96px;border-radius:50%"><div><h1 class="t-display" style="font-size:28px;line-height:36px">أهلاً بيك في مادو</h1><p class="t-muted">سجّل دخولك لإدارة المبيعات والمخازن</p></div></div>
+<div class="m-card" style="display:flex;flex-direction:column;gap:16px;padding:24px">
+<div class="m-field "><label>البريد الإلكتروني</label><input class="m-input m-input--num" value="ahmed@mado-smoking.com" placeholder="" readonly></div><div class="m-field "><label>كلمة المرور</label><div class="m-search"><input class="m-input m-input--num" value="••••••••" readonly><span style="position:absolute;inset-inline-end:14px;color:var(--ink-subtle)"><svg class="m-ico " viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span></div></div>
+<button class="m-btn m-btn--primary m-btn--lg m-btn--block">تسجيل الدخول</button>
+<div class="m-row t-small t-subtle" style="gap:12px"><hr class="m-divider" style="flex:1"><span>أو</span><hr class="m-divider" style="flex:1"></div>
+<button class="m-btn m-btn--secondary m-btn--lg m-btn--block"><b style="font-size:18px;color:var(--gold-text)">G</b>الدخول بحساب Google</button></div>
+<p class="t-small t-subtle" style="text-align:center">Mado Smoking · مادو للتدخين</p></div></div></template><template data-v="b"><div style="height:100%;display:grid;place-items:center;padding:24px;background:var(--bg)"><div style="width:100%;max-width:440px;display:flex;flex-direction:column;gap:24px">
+<div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px"><img src="/_blob/5b92730262d6cce61985d5259402b3a5" alt="Mado Smoking" style="width:96px;height:96px;border-radius:50%"><div><h1 class="t-display" style="font-size:28px;line-height:36px">أهلاً بيك في مادو</h1><p class="t-muted">سجّل دخولك لإدارة المبيعات والمخازن</p></div></div>
+<div class="m-card" style="display:flex;flex-direction:column;gap:16px;padding:24px"><div class="m-alert"><svg class="m-ico " viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg><div><b>الحساب غير مفعل</b><div class="t-small t-muted">حسابك لسه مستني تفعيل من المالك. كلّمه علشان يفعّله وبعدين ادخل تاني.</div></div></div>
+<div class="m-field "><label>البريد الإلكتروني</label><input class="m-input m-input--num" value="ahmed@mado-smoking.com" placeholder="" readonly></div><div class="m-field "><label>كلمة المرور</label><div class="m-search"><input class="m-input m-input--num" value="••••••••" readonly><span style="position:absolute;inset-inline-end:14px;color:var(--ink-subtle)"><svg class="m-ico " viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span></div></div>
+<button class="m-btn m-btn--primary m-btn--lg m-btn--block">تسجيل الدخول</button>
+<div class="m-row t-small t-subtle" style="gap:12px"><hr class="m-divider" style="flex:1"><span>أو</span><hr class="m-divider" style="flex:1"></div>
+<button class="m-btn m-btn--secondary m-btn--lg m-btn--block"><b style="font-size:18px;color:var(--gold-text)">G</b>الدخول بحساب Google</button></div>
+<p class="t-small t-subtle" style="text-align:center">Mado Smoking · مادو للتدخين</p></div></div></template>
+<script>
+(function(){var st={v:'a',vp:'m',th:'dark'},ab=document.getElementById('ab'),sc=document.getElementById('sc'),stg=document.getElementById('stage');
+function render(){var t=document.querySelector('template[data-v="'+st.v+'"]');ab.innerHTML=t.innerHTML;ab.setAttribute('data-theme',st.th);
+var d=st.vp==='d',w=d?1440:390,h=d?900:844;ab.style.width=w+'px';ab.style.height=h+'px';
+var av=document.documentElement.clientWidth-24,s=Math.min(1,av/w);sc.style.transform='scale('+s+')';sc.style.width=w+'px';sc.style.height=h+'px';
+stg.style.height=(h*s+32)+'px';sc.style.marginBottom=(-h*(1-s))+'px';
+['gv','gp','gt'].forEach(function(g){[].forEach.call(document.getElementById(g).children,function(b){var k=b.dataset.view||b.dataset.vp||b.dataset.th;b.classList.toggle('on',k===st.v||k===st.vp||k===st.th)})})}
+document.querySelector('.bar').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;if(b.dataset.view)st.v=b.dataset.view;if(b.dataset.vp)st.vp=b.dataset.vp;if(b.dataset.th)st.th=b.dataset.th;render()});
+window.addEventListener('resize',render);render()})();
+</script>
