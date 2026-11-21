@@ -91,7 +91,7 @@ service cloud.firestore {
     }
 
     function isOwnerOnly(coll) {
-      return coll in ['sources', 'sourceInvoices', 'sourcePayments'];
+      return coll in ['sources', 'sourceInvoices', 'sourcePayments', 'deletedCustodies'];
     }
 
     // ---------- بيانات مشتركة بين المالك ومستخدميه / بيانات المالك فقط (الموردين) ----------
@@ -99,7 +99,9 @@ service cloud.firestore {
       allow read: if (isShared(coll) || (isOwnerOnly(coll) && isOwnerRole())) && canReadOwned();
       allow create: if (isShared(coll) || (isOwnerOnly(coll) && isOwnerRole())) && canCreateOwned();
       allow update: if (isShared(coll) || (isOwnerOnly(coll) && isOwnerRole())) && canUpdateOwned();
-      allow delete: if (isShared(coll) || (isOwnerOnly(coll) && isOwnerRole())) && canDeleteOwned();
+      // حذف العهد للمالك فقط
+      allow delete: if (isShared(coll) || (isOwnerOnly(coll) && isOwnerRole())) && canDeleteOwned()
+        && (coll != 'custodies' || isOwnerRole());
     }
 
     // ---------- سجل حركات العهد: إضافة فقط، لا تعديل ولا حذف ----------

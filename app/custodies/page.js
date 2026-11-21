@@ -7,7 +7,7 @@ import PageHeader from '../../components/layout/PageHeader';
 import Card from '../../components/ui/Card';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
-import { subscribeToCustodies, subscribeToCustodyMovements, updateCustody, createMissingCustodies, transferCustodyAmount, getUsersByOwner } from '../../lib/firebase/firestore';
+import { subscribeToCustodies, subscribeToCustodyMovements, updateCustody, deleteCustody, createMissingCustodies, transferCustodyAmount, getUsersByOwner } from '../../lib/firebase/firestore';
 import { useSession } from '../../contexts/AuthContext';
 import { HiClipboardList, HiSwitchHorizontal } from 'react-icons/hi';
 import styles from './page.module.css';
@@ -54,6 +54,30 @@ function Custodies() {
   const [transferring, setTransferring] = useState(false);
 
   const { isOwner, ownerId } = useSession();
+
+  // حذف عهدة
+  const [custodyToDelete, setCustodyToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const closeDeleteModal = () => {
+    if (deleting) return;
+    setCustodyToDelete(null);
+    setDeleteError('');
+  };
+
+  const handleDelete = async () => {
+    if (!custodyToDelete) return;
+    setDeleting(true);
+    setDeleteError('');
+    const result = await deleteCustody(custodyToDelete.id);
+    setDeleting(false);
+    if (!result.success) {
+      setDeleteError(result.error || 'فشل في حذف العهدة');
+      return;
+    }
+    setCustodyToDelete(null);
+  };
   const [loadError, setLoadError] = useState('');
 
   // سجل الحركات
@@ -239,6 +263,15 @@ function Custodies() {
                       تعديل العهدة
                     </button>
                   )}
+                  {isOwner && (
+                    <button
+                      className={styles.deleteButton}
+                      onClick={() => { setDeleteError(''); setCustodyToDelete(custody); }}
+                      title="حذف"
+                    >
+                      حذف العهدة
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -298,6 +331,31 @@ function Custodies() {
               </p>
             )}
           </div>
+        </Modal>
+
+        {/* Delete Modal */}
+        <Modal
+          isOpen={!!custodyToDelete}
+          onClose={closeDeleteModal}
+          title="حذف العهدة"
+          footer={
+            <div className={styles.formActions}>
+              <Button variant="secondary" onClick={closeDeleteModal} disabled={deleting}>
+                إلغاء
+              </Button>
+              <Button variant="danger" onClick={handleDelete} loading={deleting}>
+                حذف
+              </Button>
+            </div>
+          }
+        >
+          {deleteError && <div className={styles.errorMessage}>{deleteError}</div>}
+          <p>هل أنت متأكد أنك تريد حذف عهدة <strong>{custodyToDelete?.name}</strong>؟</p>
+          {Number(custodyToDelete?.amount) !== 0 && (
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+              رصيد العهدة الحالي {Number(custodyToDelete?.amount || 0).toLocaleString()} ج.م وسيتم حذفه معها.
+            </p>
+          )}
         </Modal>
 
         {/* Transfer Modal */}

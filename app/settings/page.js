@@ -181,7 +181,7 @@ function Settings() {
         setDeleteError('');
 
         try {
-            const result = await deleteUserByOwner(userToDelete.uid);
+            const result = await deleteUserByOwner(userToDelete.uid || userToDelete.id);
             setDeleteLoading(false); // Remove loading immediately after operation
 
             if (result.success) {
@@ -333,7 +333,7 @@ function Settings() {
                                         <>
                                             {/* Role selector for each user - we'll handle this differently */}
                                             {filteredUsers.map((u) => (
-                                                <div key={u.uid} className={styles.userRow}>
+                                                <div key={u.uid || u.id} className={styles.userRow}>
                                                     <div className={styles.userInfo}>
                                                         <div className={styles.userName}>{u.name || 'بدون اسم'}</div>
                                                         <div className={styles.userEmail}>{u.email || 'بدون بريد'}</div>
@@ -341,7 +341,7 @@ function Settings() {
                                                     <div className={styles.userControls}>
                                                         <select
                                                             value={u.role || 'user'}
-                                                            onChange={(e) => handleChangeRole(u.uid, e.target.value)}
+                                                            onChange={(e) => handleChangeRole(u.uid || u.id, e.target.value)}
                                                             className={styles.roleSelect}
                                                         >
                                                             <option value="user">مستخدم</option>
